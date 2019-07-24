@@ -1,0 +1,11 @@
+# data & creds
+data/*
+Credentials.py*
+config.py
+
+# system
+__pycache__
+.vscode
+.ipynb_checkpoints
+.python-version
+.DS_Store

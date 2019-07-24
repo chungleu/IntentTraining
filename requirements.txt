@@ -1,0 +1,10 @@
+pandas
+numpy
+datasketch
+watson_developer_cloud==0.25.2
+scikit-learn
+click
+fuzzywuzzy
+nltk
+ansicolors
+tqdm
