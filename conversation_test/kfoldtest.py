@@ -475,18 +475,3 @@ if __name__ == "__main__":
     finally:
         kfold.delete_kfold_workspaces(workspaces)
     
-    ####
-    """     
-    result_table = define_metrics(results_kfold)
-    matrix, lab, combined_df  = data_prep_confusion_matrix(results_kfold)
-
-
-    report_df = classification_report_csv(report)
-    report_least = report_df.sort_values(by = ['f1_score']).reset_index(drop=True)
-    report_top = report_df.sort_values(by = ['f1_score'], ascending=False).reset_index(drop=True)
-
-    folds = create_folds(df)
-    workspaces = create_kfold_WA(folds)
-
-    """
-
