@@ -2,7 +2,7 @@ jupyter
 pandas
 numpy
 datasketch
-watson_developer_cloud==0.25.2
+watson_developer_cloud==2.0.1
 scikit-learn
 click
 fuzzywuzzy
@@ -10,3 +10,4 @@ nltk
 ansicolors
 tqdm
 itables
+matplotlib
