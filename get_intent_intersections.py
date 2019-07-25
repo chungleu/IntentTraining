@@ -27,7 +27,7 @@ def main(topic, n_list, swords):
         An argument entered as a list will be processed as a string.
         This function transforms it into a list.
         """
-        list_out = list(map(int, list_arg.strip('[]').split(',')))
+        list_out = list(map(int, list_arg.strip('[]()').split(',')))
 
         return list_out
 
@@ -84,6 +84,19 @@ class intent_intersections(object):
         self.intents = df_training[self.intent_col].unique()
         self.df_training = df_training
 
+    def import_training_df(self, train_df):
+        """
+        Instead of using import_training data, you can also just use an existing dataframe directly
+        in the class instance.
+        Topic set to none
+        """
+        
+        ut = for_csv.utils(None)
+        train_df = ut.check_questions_df_consistency(train_df, to_lower=False, intent_col=self.intent_col)
+
+        self.intents = train_df[self.intent_col].unique()
+        self.df_training = train_df
+
     def get_ngrams_per_intent(self):
         """
         Creates:
@@ -104,7 +117,7 @@ class intent_intersections(object):
             ngram_dict[intent] = pd.Series(ngrams.get_ngram_list(self.n_list), name=intent)
             ngram_freq_list.append(ngram_dict[intent].value_counts().to_frame(name=intent))
 
-        self.ngram_per_intent_df = pd.DataFrame.from_dict(ngram_dict)
+        self.ngram_per_intent_df = pd.DataFrame.from_dict(ngram_dict).dropna()
         self.ngram_freq_df = pd.concat([frame for frame in ngram_freq_list], sort=False).sum(level=0)
 
         return self.ngram_per_intent_df, self.ngram_freq_df

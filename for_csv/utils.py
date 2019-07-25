@@ -58,26 +58,26 @@ class utils(object):
         """
         return pd.read_csv(data_path, squeeze=True)
 
-    def check_questions_df_consistency(self, questions, to_lower=False):
+    def check_questions_df_consistency(self, questions, to_lower=False, utterance_col='utterance', intent_col='Intent'):
         # TODO: to_lower results in posting 0 utterances to training. Why?
         if to_lower:
             questions = questions.apply(lambda x: x.astype(str).str.lower())
 
-        questions['Intent'] = questions['Intent'].astype(str).str.lower()
+        questions[intent_col] = questions[intent_col].astype(str).str.lower()
         length_before = len(questions)
 
-        if questions.apply(lambda x: x.astype(str).str.lower()).duplicated(subset=['utterance', 'Intent']).any() == True:
+        if questions.apply(lambda x: x.astype(str).str.lower()).duplicated(subset=[utterance_col, intent_col]).any() == True:
             #duplicates = questions[questions.duplicated(subset=['utterance','Intent'])]
             #print('List of duplicate utterances to be disregarded:')
             # print(set(list(duplicates.Question)))
             questions_lower = questions.apply(
                 lambda x: x.astype(str).str.lower())
             dup_inds = questions_lower[questions_lower.duplicated(
-                subset='utterance', keep='first')].index
+                subset=utterance_col, keep='first')].index
             questions = questions.drop(index=dup_inds)
             #print('Dataset now formed of distinct Utterance-Intent pairs.')
 
-        if questions[pd.isnull(questions['Intent'])].shape[0] > 0:
+        if questions[pd.isnull(questions[intent_col])].shape[0] > 0:
             #print('List of utterances with empty intents to be disregarded:')
             #questions_list = list(questions[pd.isnull(questions['Intent'])]['utterance'])
             # print(questions_list)
@@ -86,12 +86,12 @@ class utils(object):
             questions['TestSetRef'] = np.nan
             #print('Dataset now formed by fully-populated Utterance-Intent pairs.')
 
-        if questions[pd.isnull(questions['utterance'])].shape[0] > 0:
+        if questions[pd.isnull(questions[utterance_col])].shape[0] > 0:
             #print('Empty utterances found:')
             # print(questions[pd.isnull(questions['utterance'])])
-            questions = questions.dropna(subset=['utterance'])
+            questions = questions.dropna(subset=[utterance_col])
 
-        elements = list(questions['utterance'])
+        elements = list(questions[utterance_col])
         e_list = []
 
         for e in elements:

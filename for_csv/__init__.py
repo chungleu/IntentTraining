@@ -6,3 +6,4 @@ from .nlp import *
 from .process_dataframe import *
 from .topic_modelling import *
 from .utils import *
+from .chi2_feat_select import *

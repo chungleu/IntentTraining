@@ -18,11 +18,13 @@ from Credentials import ctx, workspace_id, conversation_version, active_adoption
 #logger = getLogger('download_intents')
 
 ### CHANGE ME
-workspaces_to_ignore = ['9dfae676-40da-4364-ad33-cd3e25900d3a']
+workspaces_to_ignore = []
 ### 
 
 @click.command()
 @click.option('--proxy', '-p', is_flag=True, help='Currently disabled.')
+def click_main(proxy):
+    main(proxy)
 
 def main(proxy):
     debug = False
@@ -92,4 +94,4 @@ def main(proxy):
         workspace_df_to_csv(workspace_df, workspace_name)
 
 if __name__ == "__main__":
-    main()
+    click_main()
