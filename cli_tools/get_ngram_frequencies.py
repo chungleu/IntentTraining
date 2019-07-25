@@ -9,6 +9,8 @@ top_a = False
 #norm = True
 norm_thresh = False
 ###
+import sys
+sys.path.append('..')
 
 import os, time
 import click

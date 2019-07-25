@@ -2,6 +2,8 @@
 Extracts the intents in all workspaces within an instance to CSV, to data/workspace_training.
 Same format as using the download intents functionality within the Watson Assistant UI.
 """
+import sys
+sys.path.append('..')
 
 # external
 import os

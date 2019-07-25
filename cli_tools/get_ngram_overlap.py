@@ -7,6 +7,9 @@ params:
 TODO: extend to multi-workspace
 """
 
+import sys
+sys.path.append('..')
+
 ###
 import os, time
 import pandas as pd

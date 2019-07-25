@@ -2,6 +2,8 @@
 Accepts blind set output, intents which are confused, n_list, whether to retain intent order.
 Splits utterances into ngrams, searches for examples in that workspace’s training for these ngrams (prioritising the intents chosen)
 """
+import sys
+sys.path.append('..')
 
 import click
 import pandas as pd

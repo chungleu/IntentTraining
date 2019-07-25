@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 # vars: config
 from config import *
 

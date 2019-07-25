@@ -1,3 +1,6 @@
+import sys
+sys.path.append('..')
+
 from config import *
 import os, time
 import fuzzywuzzy.process as fuzz_process

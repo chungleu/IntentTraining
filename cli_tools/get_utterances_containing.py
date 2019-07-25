@@ -3,6 +3,8 @@ Get utterances containing a string that is passed in as the only command line ar
 through the pilot logs CSV specified in config.py.
 """
 # TODO: switch to using logger
+import sys
+sys.path.append('..')
 
 from config import *
 import for_csv

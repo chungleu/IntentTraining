@@ -11,11 +11,14 @@ Args: train_path, test_path
 # TODO: check consistency against what's in production.
 # TODO: this seems like it would work better as an sklearn pipeline?
 
+import sys
+sys.path.append('..')
+
 # external
 import pandas as pd
 import numpy as np
 import click
-import os, sys
+import os
 from tqdm import tqdm
 tqdm.pandas()
 

@@ -1,3 +1,4 @@
+jupyter
 pandas
 numpy
 datasketch
@@ -8,3 +9,4 @@ fuzzywuzzy
 nltk
 ansicolors
 tqdm
+itables
