@@ -460,15 +460,15 @@ if __name__ == "__main__":
         time.sleep(20)
     
     try:
+        # results per utterance
         results_kfold = kfold.run_kfold_test(folds)
-        
-        print(results_kfold)
         results_kfold.to_csv('results_kfold.csv')
 
+        # metrics per intent
         classification_report = kfold.create_classification_report(results_kfold)
         classification_report.to_csv('classification_report.csv')
 
-        # erika's metrics function
+        # metrics per fold
         metrics_per_fold = kfold.get_metrics_per_fold(results_kfold)
         metrics_per_fold.to_csv('metrics_per_fold.csv')
 
