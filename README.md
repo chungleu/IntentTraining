@@ -1,4 +1,5 @@
-# Intent Training Tools
+# Intent Training Tools
+
 
 A series of tools to enable management and testing of intents within Watson Assistant instances. These are best used alongside the Training at Scale paper (*link soon*).
 
