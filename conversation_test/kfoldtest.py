@@ -56,6 +56,9 @@ class kfoldtest(object):
         # authenticate
         self.authenticate_watson()
 
+        # list of workspaces that the instance has created
+        self.workspaces = []
+
     def authenticate_watson(self):
         """
         Connect to WA and return an assistant instance. 
@@ -130,6 +133,13 @@ class kfoldtest(object):
 
         return df 
 
+    def intent_df_from_df(self, df):
+        """
+        Use an existing df as train_df
+        """
+
+        self.training_df = df
+
     def create_folds(self):
         """
         create the folds for the k-fold test. It is using the Stratifies K-fold division. 
@@ -158,7 +168,8 @@ class kfoldtest(object):
         counting the existing workspaces and check if there is space for k-workspaces 
         """
         response = self.assistant.list_workspaces().get_result()
-        
+        k_fold_number = self.n_folds
+
         if(len(response['workspaces'])+k_fold_number <=20):
             print("You have space to perform the k-fold test")
         else: 
@@ -220,17 +231,17 @@ class kfoldtest(object):
         :param folds: are the folds created in the function `create_folds`
         :return workspaces: is a list of workspaces ID generated 
         """
-        workspaces = []
+        
         for i in range(len(folds)):
             print("creating K-FOLD workspace {} out of {}".format(i+1, len(folds)))
             train = folds[i]["train"]
             intents = self.create_intents(train)
             workspace_id = self.create_workspace(intents, i)
-            workspaces.append(workspace_id)
+            self.workspaces.append(workspace_id)
         
-        return workspaces
+        return self.workspaces
 
-    def check_status(self, workspaces): 
+    def check_workspaces_status(self): 
         """
         check the status of the workspace just created - You can start the k-fold only when 
         the workspaces are `Available` and not in Training mode. 
@@ -239,6 +250,8 @@ class kfoldtest(object):
         """
 
         available_count = 0
+
+        workspaces = self.workspaces
 
         for i in range(len(workspaces)):
             response = self.assistant.get_workspace(workspace_id = workspaces[i]).get_result()
@@ -251,7 +264,7 @@ class kfoldtest(object):
         return available_count == len(workspaces)
 
 
-    def test_kfold(self, df_test, ws_id):
+    def test_kfold(self, df_test, ws_id, export_interim=False):
         """
         This function will take the regression test uploaded in csv and will send each phrase to WA and collect 
         information on how the system responded. 
@@ -268,7 +281,7 @@ class kfoldtest(object):
 
             text = df_test['utterance'][i]
 
-            response = self.assistant.message(workspace_id=workspaces[ws_id], input={'text': text}, alternate_intents= True)
+            response = self.assistant.message(workspace_id=self.workspaces[ws_id], input={'text': text}, alternate_intents= True)
             dumps = json.dumps(response.get_result(), indent=2)
             
             data = json.loads(dumps)
@@ -291,7 +304,8 @@ class kfoldtest(object):
                     'confidence3': confidence3, 
                 }, ignore_index=True)
             
-        results.to_csv("./kfold_{}_raw.csv".format(ws_id+1), encoding='utf-8')
+        if export_interim:
+            results.to_csv("./kfold_{}_raw.csv".format(ws_id+1), encoding='utf-8')
         
         return results
 
@@ -317,7 +331,7 @@ class kfoldtest(object):
         print("FINISHED")
 
         test_results.loc[:, "intent_correct"] = test_results["intent1"]
-        test_results["intent_correct"] = np.where((test_results["confidence1"]<threshold), "BELOW_THRESHOLD", test_results["intent1"])
+        test_results["intent_correct"] = np.where((test_results["confidence1"]<self.threshold), "BELOW_THRESHOLD", test_results["intent1"])
 
         return test_results
 
@@ -361,7 +375,7 @@ class kfoldtest(object):
         list_df
         
         list_df["intent_correct"] = list_df["intent1"]
-        list_df["intent_correct"] = np.where((list_df["confidence1"]<threshold), "BELOW_THRESHOLD", list_df["intent1"])
+        list_df["intent_correct"] = np.where((list_df["confidence1"]<self.threshold), "BELOW_THRESHOLD", list_df["intent1"])
         matrix = confusion_matrix(list_df["intent_correct"], list_df["expected intent"])
         
         lab1 = list_df["intent_correct"].unique()
@@ -423,18 +437,57 @@ class kfoldtest(object):
         
         report = classification_report(results["intent_correct"], results["expected intent"], output_dict=True)
         report_df = pd.DataFrame.from_dict(report)
+        report_df = report_df.drop(columns = ["BELOW_THRESHOLD"])
+        
+        # TODO: not sure where this col has come from
+        if "accuracy" in report_df.columns:
+            report_df = report_df.drop(columns = 'accuracy')
         
         return report_df.T    
 
-    def delete_kfold_workspaces(self, workspaces):
+    def delete_kfold_workspaces(self):
         """
         delete the workspaces when you dont need them anymore
         """
+
+        workspaces = self.workspaces
+
         for i in range(len(workspaces)):
             print("deleting workspace {} out of {}: {}".format(i+1, len(workspaces), workspaces[i]))
             response = self.assistant.delete_workspace(
                     workspace_id = workspaces[i]).get_result() 
 
+        self.workspaces = []
+
+    def full_run_kfold_from_df(self, train_df):
+        """
+        Given a training df, will run kfold tests and output all metrics.
+        """
+        self.check_sufficient_workspaces()
+        folds = self.create_folds()
+        self.create_kfold_WA(folds)
+
+        available_flag = False
+        
+        while available_flag == False:
+            print("Checking workspaces..")
+            available_flag = self.check_workspaces_status()
+            time.sleep(20)
+        
+        try:
+            # results per utterance
+            results_kfold = self.run_kfold_test(folds)
+
+            # metrics per intent
+            classification_report = self.create_classification_report(results_kfold)
+
+            # metrics per fold
+            metrics_per_fold = self.get_metrics_per_fold(results_kfold)
+
+        finally:
+            self.delete_kfold_workspaces()
+
+        return results_kfold, classification_report, metrics_per_fold
 
 if __name__ == "__main__":
     k_fold_number = 3 #USER INPUT 
@@ -450,19 +503,19 @@ if __name__ == "__main__":
     train_df = kfold.intent_df_from_watson(workspace_id)
     kfold.check_sufficient_workspaces()
     folds = kfold.create_folds()
-    workspaces = kfold.create_kfold_WA(folds)
+    kfold.create_kfold_WA(folds)
 
     available_flag = False
     
     while available_flag == False:
         print("Checking workspaces..")
-        available_flag = kfold.check_status(workspaces)
+        available_flag = kfold.check_workspaces_status()
         time.sleep(20)
     
     try:
         # results per utterance
         results_kfold = kfold.run_kfold_test(folds)
-        results_kfold.to_csv('results_kfold.csv')
+        results_kfold.to_csv(results_path)
 
         # metrics per intent
         classification_report = kfold.create_classification_report(results_kfold)
@@ -473,5 +526,5 @@ if __name__ == "__main__":
         metrics_per_fold.to_csv('metrics_per_fold.csv')
 
     finally:
-        kfold.delete_kfold_workspaces(workspaces)
+        kfold.delete_kfold_workspaces()
     
