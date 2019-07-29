@@ -59,14 +59,17 @@ def run_blindset(topic, results_type, conf_matrix):
     results = bs.run_blind_test(blindset_df, workspace_id)
 
     # exports + metrics
+    from metrics import Metrics
     if (results_type == 'raw') or (results_type == 'all'):
         cols_export = [col for col in results.columns.values if col != 'intent_correct']
         results[cols_export].to_csv(output_loc_results, encoding='utf-8')
         logger.info("Raw results exported to {}".format(output_loc_results))
 
     if (results_type == 'metrics') or (results_type == 'all'):
-        metrics = bs.create_classification_report(results)
-        metrics.to_csv(output_loc_metrics, encoding='utf-8')
+        met = Metrics(workspace_thresh, topic)
+        metric_df, _ = met.get_all_metrics(results, detailed_results=True)
+
+        metric_df.to_csv(output_loc_metrics, encoding='utf-8')
         logger.info("Metrics per intent exported to {}".format(output_loc_metrics))
 
     # confusion matrix
