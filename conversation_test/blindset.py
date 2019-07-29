@@ -1,26 +1,3 @@
-#!/usr/bin/env python
-# coding: utf-8
-
-# # Performance Testing for Watson Assistant 
-# This notebook can be used for Regression testing and Blind testing. 
-# 
-# 1. **Regression Test Scope**: This can be used to test a set of testing phrases that are not part of the training set in Watson Assistant (WA). The idea is that you would re-run this test over time after the improvement phase, to check the health status of your workspace, and make sure that the workspace is still behaving in a consistent manner. 
-# 2. **Blind Test Scope**: Simply analyse a set of testing phrases that are not part of the training set in Watson Assistant. This can be a one-off task requested by stakeholders. 
-# 
-# Either way, the procedure to obtain the results is the same in both cases. The difference is the scope and the content of your testing set.  
-# 
-# <div class="alert alert-block alert-info">
-# <b>Notebook Summary</b>
-# <br>
-#       
-# 1. <b>Connect to WA</b> : credentials to connect to the right WA workspace<br>
-# 2. <b>Feed your test set</b> : feed your regression test in a .csv format<br>
-# 3. <b>Run the blind test</b> : send the testing phrases to WA workspace <br>
-# 4. <b>Analyse the results</b> : calculate the metrics and confusion matrix<br>
-# 5. <b>Analyse the incorrect matches</b> : highlight the phrases that did not trigger the right intent  
-# </div>
-# 
-
 # ## Libraries
 import json 
 import pandas as pd
@@ -31,6 +8,79 @@ from watson_developer_cloud import AssistantV1
 from IPython.display import display
 from sklearn.metrics import *
 import itertools
+import click
+import os
+import sys
+sys.path.append('..')
+
+import for_csv.logger
+from logging import getLogger
+logger = getLogger("blindset")
+
+@click.command()
+@click.argument('topic', nargs=1)
+@click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics', 'all']), prompt=True, help='Whether to give raw results per utterance, metrics, or both.')
+@click.option('--conf_matrix', '-c', is_flag=True ,help='Whether to plot a confusion matrix.')
+def run_blindset(topic, results_type, conf_matrix):
+    """
+    Runs blindset test using credentials in ../Credentials.py
+    """
+
+    # get credentials, import + export folders
+    import Credentials
+    active_adoption = Credentials.active_adoption
+    instance_creds = Credentials.ctx[active_adoption]
+    workspace_id = Credentials.workspace_id[active_adoption][topic]
+    workspace_thresh = Credentials.calculate_workspace_thresh(topic)
+
+    # import + export folders
+    import config
+    import time
+    data_folder = config.data_dir
+    export_folder = config.output_folder
+    timestr = time.strftime("%Y%m%d-%H%M")
+    
+    blindset_name = topic + "_blindset.csv"
+    output_loc_results = os.path.join(export_folder, "{}_results_raw_{}.csv".format(topic, timestr))
+    output_loc_metrics = os.path.join(export_folder, "{}_results_metrics_{}.csv".format(topic, timestr))
+    output_loc_confmat = os.path.join(export_folder, "{}_confmat_{}.png".format(topic, timestr))
+
+    # authenticate
+    if 'apikey' in instance_creds:
+        logger.debug("Authenticating (apikey)")
+        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh)
+    elif 'password' in instance_creds:
+        logger.debug("Authenticating (username/password)")
+        bs = blindset(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh)
+    
+    # run test
+    blindset_df = bs.import_blindset(os.path.join(data_folder, blindset_name))
+    # TODO: check blindset df
+    results = bs.run_blind_test(blindset_df, workspace_id)
+
+    # exports + metrics
+    if (results_type == 'raw') or (results_type == 'all'):
+        cols_export = [col for col in results.columns.values if col != 'intent_correct']
+        results[cols_export].to_csv(output_loc_results, encoding='utf-8')
+        logger.info("Raw results exported to {}".format(output_loc_results))
+
+    if (results_type == 'metrics') or (results_type == 'all'):
+        metrics = bs.create_classification_report(results)
+        metrics.to_csv(output_loc_metrics, encoding='utf-8')
+        logger.info("Metrics per intent exported to {}".format(output_loc_metrics))
+
+    # confusion matrix
+    if conf_matrix:
+        bs.plot_confusion_matrix(results, output_loc_confmat)    
+        logger.info("Confusion matrix saved to {}".format(output_loc_confmat))
+
+    # print high-level metrics
+    overall_metrics = bs.calculate_overall_metrics(results, av_method="weighted")
+    logger.info("Overall metrics for the workspace (weighted):")
+    logger.info(overall_metrics)
+    
+    # TODO: check consistency of test set before running.
+
 
 class blindset(object):
     """
@@ -102,9 +152,9 @@ class blindset(object):
 
         return test_set_df
 
-    def run_blind_test(self, test_set_df, workspace_id, results_path):
+    def run_blind_test(self, test_set_df, workspace_id):
         """
-        Runs blind set test and exports results to CSV.
+        Runs blind set test and returns results df.
         
         Parameter: 
             test_set_df: the regression_test in csv format
@@ -115,7 +165,7 @@ class blindset(object):
 
         results = pd.DataFrame(columns=['original_text','expected intent','intent1','confidence1',
                                         'intent2','confidence2','intent3','confidence3'])
-        print("=== BLIND TEST STARTING ===")
+        logger.info("Running blind test...")
         for i in tqdm(range(len(test_set_df))):
 
             text = test_set_df["utterance"][i]
@@ -141,19 +191,17 @@ class blindset(object):
                 'intent3': intent3,
                 'confidence3': confidence3, \
             }, ignore_index=True)
-        
-        results.to_csv(results_path, encoding='utf-8', index=False)
-        
-        print("=== BLIND TEST FINISHED===")
-        
+
+        results["intent_correct"] = results["intent1"]
+        results["intent_correct"] = np.where((results["confidence1"]<self.threshold), "BELOW_THRESHOLD", results["intent1"])
+
         return results
 
     def data_prep(self, dataframe):
         """
         this function prepares the dataframe to be used for plot confusion matrix
         """
-        dataframe["intent_correct"] = dataframe["intent1"]
-        dataframe["intent_correct"] = np.where((dataframe["confidence1"]<self.threshold), "BELOW_THRESHOLD", dataframe["intent1"])
+
         matrix = confusion_matrix(dataframe["intent_correct"], dataframe["expected intent"])
         
         lab1 = dataframe["intent_correct"].unique()
@@ -162,12 +210,14 @@ class blindset(object):
         
         return matrix, lab
 
-    def plot_confusion_matrix(self, results,
+    def plot_confusion_matrix(self, results, 
+                            save_path=None,
                             normalize=False,
                             title='Confusion matrix',
                             cmap=plt.cm.RdPu):
         """
         This function prints and plots the confusion matrix.
+        It also saves it to save_path if specified.
         Normalization can be applied by setting `normalize=True`.
         """
 
@@ -193,9 +243,10 @@ class blindset(object):
 
         plt.ylabel('Actual Intent')
         plt.xlabel('Predicted Intent')
-        #plt.tight_layout()
+        plt.tight_layout()
         
-        plt.savefig('confusion_matrix.png') 
+        if save_path:
+            plt.savefig(save_path) 
 
     def calculate_overall_metrics(self, results, av_method='weighted'):
         """
@@ -222,7 +273,7 @@ class blindset(object):
 
 if __name__ == "__main__":
     """ TESTING """
-    # params
+    """     # params
     auth_type = 'apikey'
     apikey = '5XuD4BoYqV0Lx5PUltqzVnDue1MzCTgGcld8uCtPsNR_'
     url = 'https://gateway.watsonplatform.net/assistant/api'
@@ -238,7 +289,7 @@ if __name__ == "__main__":
     # run blind set test
     test_set_df = blindset.import_blindset(test_set_path)
     results = blindset.run_blind_test(test_set_df, workspace_id, results_path)
-    
+    results.to_csv('results.csv')
     # confusion matrix
     blindset.plot_confusion_matrix(results)    
     
@@ -248,4 +299,5 @@ if __name__ == "__main__":
     
     # classification report
     classification_report_df = blindset.create_classification_report(results)
-    classification_report_df.to_csv('classification_report.csv')
+    classification_report_df.to_csv('classification_report.csv') """
+    run_blindset()
