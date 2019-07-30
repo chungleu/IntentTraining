@@ -53,6 +53,11 @@ class kfoldtest(object):
             self.password = kwargs['password']
             self.auth_type = 'password'
 
+        if 'version' in kwargs:
+            self.conversation_version = kwargs['version']
+        else:
+            self.conversation_version = '2018-07-10'
+
         # authenticate
         self.authenticate_watson()
 
@@ -68,14 +73,14 @@ class kfoldtest(object):
         if self.auth_type == 'apikey':
             assistant = AssistantV1(
                 iam_apikey=self.apikey,
-                version='2018-07-10', 
+                version=self.conversation_version, 
                 url= self.url)
 
         elif self.auth_type == 'password':
             assistant = AssistantV1(
                 username=self.username,
                 password=self.password,
-                version='2018-07-10',
+                version=self.conversation_version,
                 url= self.url)  
 
         self.assistant = assistant

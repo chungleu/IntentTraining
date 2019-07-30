@@ -32,6 +32,7 @@ def run_blindset(topic, results_type, conf_matrix):
     instance_creds = Credentials.ctx[active_adoption]
     workspace_id = Credentials.workspace_id[active_adoption][topic]
     workspace_thresh = Credentials.calculate_workspace_thresh(topic)
+    conversation_version = Credential.conversation_version
 
     # import + export folders
     import config
@@ -48,10 +49,11 @@ def run_blindset(topic, results_type, conf_matrix):
     # authenticate
     if 'apikey' in instance_creds:
         logger.debug("Authenticating (apikey)")
-        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh)
+        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh, version = conversation_version)
     elif 'password' in instance_creds:
         logger.debug("Authenticating (username/password)")
-        bs = blindset(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh)
+        bs = blindset(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh, 
+            version=conversation_version)
     
     # run test
     blindset_df = bs.import_blindset(os.path.join(data_folder, blindset_name))
@@ -93,6 +95,7 @@ class blindset(object):
     - username & password, or apikey
     - url
     - threshold
+    - version
     """
     def __init__(self, **kwargs):
         
@@ -119,6 +122,11 @@ class blindset(object):
             self.password = kwargs['password']
             self.auth_type = 'password'
 
+        if 'version' in kwargs:
+            self.conversation_version = kwargs['version']
+        else:
+            self.conversation_version = '2018-07-10'
+
         # authenticate
         self.authenticate_watson()
 
@@ -131,14 +139,14 @@ class blindset(object):
         if self.auth_type == 'apikey':
             assistant = AssistantV1(
                 iam_apikey=self.apikey,
-                version='2018-07-10', 
+                version=self.conversation_version, 
                 url= self.url)
 
         elif self.auth_type == 'password':
             assistant = AssistantV1(
                 username=self.username,
                 password=self.password,
-                version='2018-07-10',
+                version=self.conversation_version,
                 url= self.url)  
 
         self.assistant = assistant
