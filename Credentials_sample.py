@@ -1,19 +1,6 @@
-# *****************************************************************
-#
-# Licensed Materials - Property of IBM
-#
-# IBM Watson Conversation Test Suite
-# (C) Copyright IBM Corp. 2017. All Rights Reserved.
-#
-# US Government Users Restricted Rights - Use, duplication or
-# disclosure restricted by GSA ADP Schedule Contract with IBM Corp.
-#
-# *****************************************************************
-
-##################################################################
-# This file is to set the credentials for all the examples to run.
-
-# This should be a copy of your service credentials of the conversation service.
+"""
+This file sets the credentials to run the tests and other scripts which require access to Watson Assistant.
+"""
 
 # Adoptions
 adoption1 = ""
@@ -21,14 +8,13 @@ adoption2 = ""
 adoption3 = ""
 
 # Requires user input, depending on which adoption code runs for
-active_adoption = adoption2
+active_adoption = adoption1
 
-# Service credentials
+# Service credentials - can use apikey or username/password
 ctx = {
   adoption1: {
     "url": "https://gateway-fra.watsonplatform.net/conversation/api",
-    "username": "",
-    "password": ""
+    "apikey": ""
   },
   adoption2: {
     "url": "https://gateway-fra.watsonplatform.net/conversation/api",
@@ -45,7 +31,7 @@ ctx = {
 # Workspace IDs
 workspace_id = {
   adoption1: {
-    "workspace1": "",
+    "workspace-name": "workspace-id",
     "workspace2": ""
   },
   adoption2: {
@@ -56,11 +42,20 @@ workspace_id = {
   }
 }
 
-# Conversation API version to use.
-conversation_version = '2017-02-03'
+# conversation version
+conversation_version = '2018-07-10'
 
-# Alchemy key from your service.
-alchemy_key = ''
+# Function to calculate workspace threshold
+def calculate_workspace_thresh(topic):
+    """
+    Simple if/else to return a workspace threshold for a given topic. 
+    Edit the below functions to change workspace confidence thresholds.
+    """
+    if topic == 'master':
+        workspace_thresh = 0.75
+    elif topic == 'exception-handling':
+        workspace_thresh = 0.8
+    else:
+        workspace_thresh = 0.4
 
-# Service credentials from your tone analyser service.
-tone_ctx = {}
+    return workspace_thresh
