@@ -32,7 +32,7 @@ def run_blindset(topic, results_type, conf_matrix):
     instance_creds = Credentials.ctx[active_adoption]
     workspace_id = Credentials.workspace_id[active_adoption][topic]
     workspace_thresh = Credentials.calculate_workspace_thresh(topic)
-    conversation_version = Credential.conversation_version
+    conversation_version = Credentials.conversation_version
 
     # import + export folders
     import config
@@ -76,7 +76,10 @@ def run_blindset(topic, results_type, conf_matrix):
 
     # confusion matrix
     if conf_matrix:
-        bs.plot_confusion_matrix(results, output_loc_confmat)    
+        from confusionmatrix import ConfusionMatrix
+        cfn = ConfusionMatrix(workspace_thresh=workspace_thresh)
+        cfn.create(results, fig_path=output_loc_confmat)
+        #bs.plot_confusion_matrix(results, output_loc_confmat)    
         logger.info("Confusion matrix saved to {}".format(output_loc_confmat))
 
     # print high-level metrics
