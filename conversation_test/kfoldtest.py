@@ -83,7 +83,10 @@ def run_kfold(topic, no_folds, results_type, conf_matrix):
         classification_report = kf.create_classification_report(results)
 
         if (results_type == 'metrics') or (results_type == 'all'):
-            classification_report.to_csv(output_loc_metrics)
+            from metrics import Metrics
+            metrics = Metrics(workspace_thresh, topic)
+            metric_df = metrics.get_all_metrics_CV(results, fold_col='fold', detailed_results=False)
+            metric_df.to_csv(output_loc_metrics)
 
         # TODO: confusion matrix
 
@@ -117,7 +120,7 @@ class kfoldtest(object):
             self.n_folds = kwargs['n_folds']
         else:
             self.n_folds = 5
-            print("Number of folds not provided so set to 5 as default.")
+            logger.warn("Number of folds not provided so set to 5 as default.")
         
         # make sure all variables are here
         if ('apikey' not in kwargs) and (any(('username', 'password')) not in kwargs):
@@ -142,6 +145,8 @@ class kfoldtest(object):
 
         # list of workspaces that the instance has created
         self.workspaces = []
+
+        # TODO: get max number of workspaces in instance from API call
 
     def authenticate_watson(self):
         """
@@ -177,7 +182,7 @@ class kfoldtest(object):
         df = pd.DataFrame(columns = ['intent', 'utterance'])
         
         for i in range(len(data['intents'])):
-            print("Scanned intent: {}".format(data['intents'][i]['intent']))
+            #print("Scanned intent: {}".format(data['intents'][i]['intent']))
             for j in range(len(data['intents'][i]['examples'])):
                 df = df.append({'intent': data['intents'][i]['intent'],
                             'utterance': data['intents'][i]['examples'][j]['utterance']}
@@ -211,7 +216,7 @@ class kfoldtest(object):
                 text = data_examples["examples"][j]["text"]
                 df = df.append({'intent':name_intent,'utterance': text},ignore_index=True)
             
-            print ("Scanned intent: " , name_intent )
+            #print ("Scanned intent: " , name_intent )
         
         self.training_df = df
 
@@ -242,7 +247,7 @@ class kfoldtest(object):
             fold = {"train": train_index,
                     "test": test_index}
             folds.append(fold)
-            print("fold num {}: train set: {}, test set: {}".format(i+1,len(folds[i]["train"]), len(folds[i]["test"])))
+            logger.debug("fold num {}: train set: {}, test set: {}".format(i+1,len(folds[i]["train"]), len(folds[i]["test"])))
             i += 1
         
         return folds
@@ -255,10 +260,10 @@ class kfoldtest(object):
         k_fold_number = self.n_folds
 
         if(len(response['workspaces'])+k_fold_number <=20):
-            print("You have space to perform the k-fold test")
+            logger.info("You have space to perform the k-fold test")
         else: 
             remove = len(response['workspaces'])+k_fold_number-20
-            raise ValueError("Be careful! The K-fold test will make you exceed the 20 workspaces limit. Make "
+            raise ValueError("The K-fold test will make you exceed the 20 workspaces limit. Make "
             "sure to remove {} workspaces before creating the k-fold workspaces".format(remove))
         
 
@@ -315,9 +320,9 @@ class kfoldtest(object):
         :param folds: are the folds created in the function `create_folds`
         :return workspaces: is a list of workspaces ID generated 
         """
+        logger.info("Creating kfold workspaces..")
         
         for i in range(len(folds)):
-            print("creating K-FOLD workspace {} out of {}".format(i+1, len(folds)))
             train = folds[i]["train"]
             intents = self.create_intents(train)
             workspace_id = self.create_workspace(intents, i)
@@ -343,7 +348,7 @@ class kfoldtest(object):
             # The status can be: unavailable, training, non-existent, failed 
             if (status == 'Available'):
                 available_count +=1
-                print("Workspace {} ({}) available".format(workspaces[i], i+1))
+                logger.debug("Workspace {} available".format(i+1))
         
         return available_count == len(workspaces)
 
@@ -402,17 +407,14 @@ class kfoldtest(object):
         :return test_results: is list of results (dataframes) for each fold.  
         """
         test_results = pd.DataFrame()
-        for i in tqdm(range(len(folds))):
-            print("\n")
-            print("RUNNING K-FOLD FOR FOLD NUMBER {}".format(i+1))
+        for i in range(len(folds)):
+            logger.info("Running test for fold {}".format(i+1))
             test_index = folds[i]['test']
             df_test = self.training_df.iloc[test_index]
             df_test_reindexed = df_test.reset_index()
             results = self.test_kfold(df_test_reindexed, i)
             results["fold"] = i+1
             test_results = test_results.append(results)
-        print("\n")
-        print("FINISHED")
 
         test_results.loc[:, "intent_correct"] = test_results["intent1"]
         test_results["intent_correct"] = np.where((test_results["confidence1"]<self.threshold), "BELOW_THRESHOLD", test_results["intent1"])
@@ -536,8 +538,9 @@ class kfoldtest(object):
 
         workspaces = self.workspaces
 
+        logger.info("Deleting temporary workspaces")
+
         for i in range(len(workspaces)):
-            print("deleting workspace {} out of {}: {}".format(i+1, len(workspaces), workspaces[i]))
             response = self.assistant.delete_workspace(
                     workspace_id = workspaces[i]).get_result() 
 
@@ -554,7 +557,7 @@ class kfoldtest(object):
         available_flag = False
         
         while available_flag == False:
-            print("Checking workspaces..")
+            logger.info("Checking workspaces..")
             available_flag = self.check_workspaces_status()
             time.sleep(20)
         

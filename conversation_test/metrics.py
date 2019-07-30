@@ -159,18 +159,9 @@ class Metrics(object):
 
             stats_combined = stats_combined.append(stats_combined_temp)
 
-        stats_combined_mean = stats_combined.groupby(stats_combined.index).mean().drop(columns=fold_col).pipe(move_index_to_top, index_to_move=self.workspace_index)
-        stats_combined_min = stats_combined.groupby(stats_combined.index).min().drop(columns=fold_col).pipe(move_index_to_top, index_to_move=self.workspace_index)
-        stats_combined_max = stats_combined.groupby(stats_combined.index).max().drop(columns=fold_col).pipe(move_index_to_top, index_to_move=self.workspace_index)
+        stats_combined = stats_combined.groupby(stats_combined.index).mean().drop(columns=fold_col).pipe(move_index_to_top, index_to_move=self.workspace_index)
 
-        stats_combined_mean['aggregation'] = 'MEAN'
-        stats_combined_min['aggregation'] = 'MIN'
-        stats_combined_max['aggregation'] = 'MAX'
-
-        stats_combined_out = pd.concat([stats_combined_mean, stats_combined_min, stats_combined_max])
-
-        return stats_combined_out
-
+        return stats_combined
 
 if __name__ == "__main__":
 
