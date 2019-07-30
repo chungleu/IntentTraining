@@ -2,8 +2,6 @@ import json
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import warnings
-warnings.filterwarnings('ignore')
 from watson_developer_cloud import AssistantV1
 from IPython.display import display
 from sklearn.metrics import *
@@ -11,6 +9,87 @@ from sklearn.model_selection import *
 import itertools
 from tqdm import tqdm 
 import time
+
+import os
+import sys
+sys.path.append('..')
+
+import for_csv.logger
+from logging import getLogger
+logger = getLogger("kfoldtest")
+
+import click
+
+@click.command()
+@click.argument('topic', nargs=1)
+@click.option('--no_folds', '-n', type=int, default=5, help="No. folds to run for kfold test")
+@click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics_intent', 'all']), default='all', help='Whether to give raw results per utterance, metrics (per intent), or all available.')
+@click.option('--conf_matrix', '-c', is_flag=True, help='Whether to plot a confusion matrix.')
+def run_kfold(topic, no_folds, results_type, conf_matrix):
+    """
+    Runs kfold test using credentials in ../Credentials.py
+    """
+
+    # get credentials, import + export folders
+    import Credentials
+    active_adoption = Credentials.active_adoption
+    instance_creds = Credentials.ctx[active_adoption]
+    workspace_id = Credentials.workspace_id[active_adoption][topic]
+    workspace_thresh = Credentials.calculate_workspace_thresh(topic)
+    conversation_version = Credentials.conversation_version
+
+    # import + export folders
+    import config
+    import time
+    data_folder = config.data_dir
+    export_folder = config.output_folder
+    timestr = time.strftime("%Y%m%d-%H%M")
+    
+    output_loc_results = os.path.join(export_folder, "{}_kfold_results_raw_{}.csv".format(topic, timestr))
+    output_loc_metrics = os.path.join(export_folder, "{}_kfold_results_metrics_{}.csv".format(topic, timestr))
+    output_loc_confmat = os.path.join(export_folder, "{}_kfold_confmat_{}.png".format(topic, timestr))
+
+    # authenticate
+    if 'apikey' in instance_creds:
+        logger.debug("Authenticating (apikey)")
+        kf = kfoldtest(n_folds=no_folds, apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh, version = conversation_version)
+    elif 'password' in instance_creds:
+        logger.debug("Authenticating (username/password)")
+        kf = kfoldtest(n_folds=no_folds, username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh, 
+            version=conversation_version)
+
+    # get train df from watson + check there are sufficient workspaces to run the test
+    train_df = kf.intent_df_from_watson(workspace_id)
+    kf.check_sufficient_workspaces()
+
+    # create folds in WA if above is true
+    folds = kf.create_folds()
+    kf.create_kfold_WA(folds)
+
+    available_flag = False
+
+    while available_flag == False:
+        logger.info("Checking workspaces..")
+        available_flag = kf.check_workspaces_status()
+        time.sleep(20)
+
+    # run kfold test 
+    try: 
+        results = kf.run_kfold_test(folds)
+
+        if (results_type == 'raw') or (results_type == 'all'):
+            results.to_csv(output_loc_results)
+
+        classification_report = kf.create_classification_report(results)
+
+        if (results_type == 'metrics') or (results_type == 'all'):
+            classification_report.to_csv(output_loc_metrics)
+
+        # TODO: confusion matrix
+
+    finally:
+        # regardless of what happens above, delete the temporary workspaces before exiting
+        kf.delete_kfold_workspaces()
 
 class kfoldtest(object):
     """
@@ -495,41 +574,5 @@ class kfoldtest(object):
         return results_kfold, classification_report, metrics_per_fold
 
 if __name__ == "__main__":
-    k_fold_number = 3 #USER INPUT 
-    threshold = 0.4   #USER INPUT
-    auth_type = 'apikey'
-    apikey = '5XuD4BoYqV0Lx5PUltqzVnDue1MzCTgGcld8uCtPsNR_'
-    url = 'https://gateway.watsonplatform.net/assistant/api'
-    workspace_id = 'e6b17f68-9a81-4ac6-ae18-231717a47d3a'
-    threshold = 0.4
-    results_path = './kfold_results.csv' 
-
-    kfold = kfoldtest(apikey=apikey, url=url, threshold=threshold, n_folds=k_fold_number)
-    train_df = kfold.intent_df_from_watson(workspace_id)
-    kfold.check_sufficient_workspaces()
-    folds = kfold.create_folds()
-    kfold.create_kfold_WA(folds)
-
-    available_flag = False
-    
-    while available_flag == False:
-        print("Checking workspaces..")
-        available_flag = kfold.check_workspaces_status()
-        time.sleep(20)
-    
-    try:
-        # results per utterance
-        results_kfold = kfold.run_kfold_test(folds)
-        results_kfold.to_csv(results_path)
-
-        # metrics per intent
-        classification_report = kfold.create_classification_report(results_kfold)
-        classification_report.to_csv('classification_report.csv')
-
-        # metrics per fold
-        metrics_per_fold = kfold.get_metrics_per_fold(results_kfold)
-        metrics_per_fold.to_csv('metrics_per_fold.csv')
-
-    finally:
-        kfold.delete_kfold_workspaces()
+    run_kfold()
     
