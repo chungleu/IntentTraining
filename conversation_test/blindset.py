@@ -19,7 +19,7 @@ logger = getLogger("blindset")
 
 @click.command()
 @click.argument('topic', nargs=1)
-@click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics', 'all']), prompt=True, help='Whether to give raw results per utterance, metrics, or both.')
+@click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics', 'all']), default='all', help='Whether to give raw results per utterance, metrics, or both.')
 @click.option('--conf_matrix', '-c', is_flag=True ,help='Whether to plot a confusion matrix.')
 def run_blindset(topic, results_type, conf_matrix):
     """
