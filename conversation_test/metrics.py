@@ -21,13 +21,11 @@ def move_index_to_top(df, index_to_move):
     return df.reindex([index_to_move, *index_vals])
 
 class Metrics(object):
-    def __init__(self, workspace_thresh, topic):
+    def __init__(self, workspace_thresh):
         """
         workspace_thresh (num < 1): confidence threshold for workspace
-        topic (str): name of workspace. Only used for labelling of the whole workspace results
         """
         self.workspace_thresh = workspace_thresh
-        self.topic = topic
 
     def calculate_workspace_metrics(self, results):
         """
@@ -58,7 +56,7 @@ class Metrics(object):
         performance_stats['F1'] = 2*(performance_stats['precision'] * performance_stats['recall'])/(performance_stats['precision'] + performance_stats['recall'] )  
 
         performance_stats_df = pd.DataFrame.from_dict(performance_stats, orient='index').T 
-        self.workspace_index = self.topic + ' (workspace)'
+        self.workspace_index = 'workspace average'
         performance_stats_df.index = [self.workspace_index]
 
         results_with_confusion = df
@@ -169,7 +167,7 @@ if __name__ == "__main__":
     def test_get_all_metrics_CV(input_path, detailed_results):
         print('Testing function test_get_all_metrics_CV')
         results = pd.read_csv(input_path)
-        metrics = Metrics(workspace_thresh=0.4, topic='TEST')
+        metrics = Metrics(workspace_thresh=0.4)
         stats_combined_out = metrics.get_all_metrics_CV(results, fold_col='KFold', detailed_results=detailed_results)
 
         print(stats_combined_out)

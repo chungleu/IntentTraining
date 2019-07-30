@@ -20,12 +20,14 @@ logger = getLogger("kfoldtest")
 
 import click
 
+# internal imports
+from conversation_test.metrics import Metrics
+
 @click.command()
 @click.argument('topic', nargs=1)
 @click.option('--no_folds', '-n', type=int, default=5, help="No. folds to run for kfold test")
 @click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics_intent', 'all']), default='all', help='Whether to give raw results per utterance, metrics (per intent), or all available.')
-@click.option('--conf_matrix', '-c', is_flag=True, help='Whether to plot a confusion matrix.')
-def run_kfold(topic, no_folds, results_type, conf_matrix):
+def run_kfold(topic, no_folds, results_type):
     """
     Runs kfold test using credentials in ../Credentials.py
     """
@@ -83,8 +85,7 @@ def run_kfold(topic, no_folds, results_type, conf_matrix):
         classification_report = kf.create_classification_report(results)
 
         if (results_type == 'metrics') or (results_type == 'all'):
-            from metrics import Metrics
-            metrics = Metrics(workspace_thresh, topic)
+            metrics = Metrics(workspace_thresh)
             metric_df = metrics.get_all_metrics_CV(results, fold_col='fold', detailed_results=False)
             metric_df.to_csv(output_loc_metrics)
 
@@ -566,15 +567,13 @@ class kfoldtest(object):
             results_kfold = self.run_kfold_test(folds)
 
             # metrics per intent
-            classification_report = self.create_classification_report(results_kfold)
-
-            # metrics per fold
-            metrics_per_fold = self.get_metrics_per_fold(results_kfold)
+            metrics = Metrics(self.threshold)
+            classification_report = metrics.get_all_metrics_CV(results_kfold, fold_col='fold', detailed_results=False)
 
         finally:
             self.delete_kfold_workspaces()
 
-        return results_kfold, classification_report, metrics_per_fold
+        return results_kfold, classification_report
 
 if __name__ == "__main__":
     run_kfold()
