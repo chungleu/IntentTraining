@@ -36,7 +36,7 @@ Cool. We have a small test suite that does blindset tests and K-Fold tests. Ever
 ## Further Usage
 As well as the notebooks and test suite there are also some CLI tools, with which you can do everything in the notebooks and a bit more. More details on these in the Wiki (**link to follow**).
 
-## Author/Contact
+## Author/Contact
 Kalyan Dutia (kalyan.dutia@ibm.com)
 
 Please slack me in the first instance **@kalyan**, or raise an issue on the repo if it's not too urgent. 
