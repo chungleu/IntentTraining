@@ -1,5 +1,14 @@
 # Intent Training Tools
 
+## Contents
+- [Intent Training Tools](#intent-training-tools)
+  - [Contents](#contents)
+  - [Description](#description)
+  - [Quickstart](#quickstart)
+    - [*I'm reading the Training at Scale paper*](#im-reading-the-training-at-scale-paper)
+    - [*I just want to use the test suite*](#i-just-want-to-use-the-test-suite)
+  - [Further Usage](#further-usage)
+
 ## Description
 A series of tools to support training and testing of intents within Watson Assistant instances. It's split into notebooks, command line tools, and a small test suite. These are best used alongside the Training at Scale paper (*link soon*).
 
