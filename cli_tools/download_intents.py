@@ -11,26 +11,20 @@ import pandas as pd
 import json
 import click
 from tqdm import tqdm
+from watson_developer_cloud import AssistantV1
 
 # internal
 from config import data_dir
-from Credentials import ctx, workspace_id, conversation_version, active_adoption
-#import for_csv
-#from logging import getLogger
-#logger = getLogger('download_intents')
+import Credentials
+import for_csv
+from logging import getLogger
+logger = getLogger('download_intents')
 
 ### CHANGE ME
 workspaces_to_ignore = []
 ### 
 
-@click.command()
-@click.option('--proxy', '-p', is_flag=True, help='Currently disabled.')
-def click_main(proxy):
-    main(proxy)
-
-def main(proxy):
-    debug = False
-
+def main():
     def workspace_df_to_csv(df, workspace_name):
         """Exports workspace dataframe to CSV"""
         file_name = workspace_name + '_questions.csv'
@@ -40,31 +34,20 @@ def main(proxy):
         output_path = os.path.join(output_dir, file_name)
         df.to_csv(output_path, index=False, header=False)
 
-    if proxy:
-        print('Proxy requires a newer version of the Watson Assistant SDK than used in this module. Run this script on a machine'
-        ' for which a proxy is not required.')
-        pass
-        
-        """ from getpass import getpass
-        import ssl
+    active_adoption = Credentials.active_adoption
+    instance_creds = Credentials.ctx[active_adoption]
+    conversation_version = Credentials.conversation_version
 
-        local_username = input("file ID: ")
-        local_password = getpass()
+    if 'apikey' in instance_creds:
+        logger.debug("Authenticating (apikey)")
+        ctk = AssistantV1(iam_apikey=instance_creds['apikey'], url=instance_creds['url'], version=conversation_version)
 
-        http_proxy = "http://" + local_username + ":" + local_password + "@proxyarray.service.group:8080"
-        https_proxy = "https://" + local_username + ":" + local_password + "@proxyarray.service.group:8080"
-        http_config = { 
-        "proxies": {"http"  : http_proxy, "https"  : https_proxy}
-        }
-        os.environ['http_proxy'] = http_proxy
-        os.environ['https_proxy'] = https_proxy """
-
-    from watson_developer_cloud import ConversationV1
-    ctk = ConversationV1(url= ctx.get(active_adoption)['url'], username=ctx.get(active_adoption)['username'], password=ctx.get(active_adoption)['password'], version=conversation_version)
+    elif 'password' in instance_creds:
+        logger.debug("Authenticating (username/password)")
+        ctk = AssistantV1(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], version=conversation_version)
     
-    workspace_info = ctk.list_workspaces()
-    if debug:
-        print({workspace["name"]: workspace["workspace_id"] for workspace in workspace_info["workspaces"] if workspace["workspace_id"] not in workspaces_to_ignore})
+    workspace_info = ctk.list_workspaces().get_result()
+    logger.debug({workspace["name"]: workspace["workspace_id"] for workspace in workspace_info["workspaces"] if workspace["workspace_id"] not in workspaces_to_ignore})
 
     for workspace in tqdm(workspace_info["workspaces"]):
         workspace_id = workspace["workspace_id"]
@@ -73,11 +56,8 @@ def main(proxy):
             continue
 
         workspace_name = workspace["name"]
-        
-        if debug:
-            print(workspace_name)
-
-        workspace = ctk.get_workspace(workspace_id, export=True)
+    
+        workspace = ctk.get_workspace(workspace_id, export=True).get_result()
         intents = workspace['intents']
 
         workspace_df = pd.DataFrame()
@@ -96,4 +76,4 @@ def main(proxy):
         workspace_df_to_csv(workspace_df, workspace_name)
 
 if __name__ == "__main__":
-    click_main()
+    main()
