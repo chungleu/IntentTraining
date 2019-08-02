@@ -1,5 +1,7 @@
 # data & creds
 data/*
+!data/workspace_training/
+data/workspace_training/*
 Credentials.py*
 config.py
 
