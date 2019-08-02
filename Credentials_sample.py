@@ -2,12 +2,12 @@
 This file sets the credentials to run the tests and other scripts which require access to Watson Assistant.
 """
 
-# Adoptions
+# Adoptions (= instances) - name each of these for ease of reference.
 adoption1 = ""
 adoption2 = ""
 adoption3 = ""
 
-# Requires user input, depending on which adoption code runs for
+# Pick the adoption you want the credentials file to point to
 active_adoption = adoption1
 
 # Service credentials - can use apikey or username/password
@@ -45,12 +45,9 @@ workspace_id = {
 # conversation version
 conversation_version = '2018-07-10'
 
-# Function to calculate workspace threshold
+# Function to calculate workspace threshold.
+# Edit the contents of the if function to change workspace thresholds.
 def calculate_workspace_thresh(topic):
-    """
-    Simple if/else to return a workspace threshold for a given topic. 
-    Edit the below functions to change workspace confidence thresholds.
-    """
     if topic == 'master':
         workspace_thresh = 0.75
     elif topic == 'exception-handling':
