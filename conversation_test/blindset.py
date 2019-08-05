@@ -2,6 +2,8 @@
 import json 
 import pandas as pd
 import numpy as np
+import matplotlib
+matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 from watson_developer_cloud import AssistantV1
