@@ -27,16 +27,16 @@ The easiest way to get this up and running is to use the two notebooks, which co
 All the notebooks are (roughly) self documenting, and you can find more details on what's in them in the paper.
 
 ### *I just want to use the test suite*
-Cool. We have a small test suite that does blindset tests and K-Fold tests. Everything you need is in the `conversation_test` folder, and you can basically ignore everything else in here.
+Cool. We have a small test suite that does blindset tests and K-Fold tests. First set yourself up with the `config.py` and `Credentials.py` files. Then, everything you need is in the `conversation_test` folder, and you can basically ignore everything else in here.
 
-2 steps:
+2 steps (after config & credentials):
 1. Install dependencies (you'll need to be in the root of the repo for this). `pip install -r requirements.txt`
-2. You're now good to go, pending some data if you want to run a blindset test. Follow instructions in the wiki (**link to follow**) to get set up.
+2. You're now good to go, pending some data if you want to run a blindset test. Follow [instructions in the wiki](https://github.ibm.com/Kalyan-Dutia/intent_training_tools/wiki/Test-Suite) to get set up.
 
 ## Further Usage
-As well as the notebooks and test suite there are also some CLI tools, with which you can do everything in the notebooks and a bit more. More details on these in the Wiki (**link to follow**).
+As well as the notebooks and test suite there are also some CLI tools, with which you can do everything in the notebooks and a bit more. More details on these [in the Wiki](https://github.ibm.com/Kalyan-Dutia/intent_training_tools/wiki/Command-Line-tools).
 
 ## Author/Contact
 Kalyan Dutia (kalyan.dutia@ibm.com)
 
-Please slack me in the first instance **@kalyan**, or raise an issue on the repo if it's not too urgent. 
+Please slack me in the first instance *@kalyan*, or raise an issue on the repo if it's not too urgent. 
