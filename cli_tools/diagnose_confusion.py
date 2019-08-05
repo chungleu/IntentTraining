@@ -11,94 +11,90 @@ import time
 import os
 import for_csv
 from for_csv.utils import process_list_argument
+from for_csv.nlp import extract_ngrams
 from get_utterances_containing import get_utterances_containing
 from config import *
 from logging import getLogger
 logger = getLogger("diagnose_confusion")
 
 @click.command()
-@click.argument("blind_result_path", nargs=1)
+@click.argument("utterance", nargs=1)
 @click.argument("topic", nargs=1)
 @click.argument("n_list", nargs=1)
-@click.option("--expected_intent", "-ei", type=str, help="Expected intent")
-@click.option("--intent1", "-i1", type=str, help="Intent1")
-@click.option("-retain_intent_order", "-o", is_flag=True)
+@click.option('--swords', '-s', type=click.Choice(['none', 'nltk', 'config']), default='none', help="Whether to use "
+"no stopwords, the nltk set, or nltk + config")
+def click_main(utterance, topic, n_list, swords):
+    logger.info("Finding matching utterances..")
+    logger.debug(utterance)
+    results_df = diagnose_from_utterance(utterance, topic, n_list, swords)
 
-def main(blind_result_path, topic, n_list, expected_intent, intent1, retain_intent_order):
+    logger.info("{} utterances found in {} intents".format(len(results_df), len(results_df['Intent'].unique())))
+
+    if len(results_df) > 0:
+        timestr = time.strftime("%Y%m%d-%H%M")
+        filename = 'diagnose_confusion_' + topic + '_' + timestr + '_' + str(n_list).strip('[]').replace(' ', '') + '.csv'
+        file_path = os.path.join(output_folder, filename)
+        results_df.to_csv(file_path)
+        logger.info("Results exported to {}".format(file_path))
+    else:
+        logger.warn("No results found so nothing exported.")
+
+def diagnose_from_utterance(utterance, topic, n_list, stopwords_in):
+    """
+    Takes an utterance, splits it into ngrams, and searches for these ngrams in training. Returns training samples containing these ngrams.
+    Intended as a rough, but more explainable version of looking at the nearest training utterances in feature space.
+    Args:
+    - utterance: to be split and searched.
+    - topic: where to look for training.
+    - n_list: comma separated list of which length ngrams to split into.
+    - stopwords_in: one of 'none', 'nltk', or 'config'.
+    """
+    # TODO: could fuzzy match ngrams for better approximation
+    ##
+
+    # process args
     n_list = process_list_argument(n_list, int)
-    stopwords_in = '_none'
+    stopwords_list = process_stopwords_arg(stopwords_in)
 
-    logger.info("Opening results file..")
-    results_df = pd.read_csv(blind_result_path)
+    # make list of all ngrams in utterance
+    ngrams_in_utterance = []
 
-    if any(["Question", "Expected Intent", "Intent1"]) not in results_df.columns.values:
-        raise ValueError('At least one of the columns Question, Expected Intent, Intent1 is not in ')
-    
-    logger.info("Getting utterances from conflict..")
-    # TODO: get retain_intent_order argument working
-    intent_list = [expected_intent, intent1]
-    intent_list_lower = [item.lower() for item in intent_list]
-    conflict_df = results_df[results_df['Expected Intent'].str.lower().isin(intent_list_lower) & results_df['Intent1'].str.lower().isin(intent_list_lower) & (results_df['Expected Intent'] != results_df['Intent1'])]
-    logger.info("{} utterances found from conflict".format(len(conflict_df)))
+    for n in n_list:
+        ngrams_in_utterance.extend( extract_ngrams(utterance, n, stopwords_list=stopwords_in, chars_remove=chars_remove) )
 
-    logger.info("Extracting ngrams..")
-    ng = for_csv.nlp.ngrams_df(conflict_df, stopwords_in=stopwords_in, chars_remove=chars_remove, utterance_col='Question')
-    ngram_list = ng.get_ngram_list(n_list)
-    # TODO: (started below) format into:
-    # utterance | expected intent | intent1 | potential problem training samples (EI) | potential problem training samples (I1) | ngrams not in training
-    df_with_ngrams = ng.create_ngram_cols(n_list) # this has the columns Question | Expected Intent | Intent1 | ... | [ngram_i]n
+    # look for each of these ngrams in training
+    results_df = pd.DataFrame()
+    for ngram in ngrams_in_utterance:
+        tempdf = get_utterances_containing(ngram, topic, case_sensitive=False, just_utterances=False, to_csv=False, training=True, hide_output=True).drop(columns='utterance_lower')
+        results_df = results_df.append(tempdf)
 
-    logger.info("Finding occurrences of ngrams in training..")
-    return_df = pd.DataFrame()
+    results_df = results_df.drop_duplicates(subset='utterance')
 
-    # iterate through each conflicting example, and get all examples where the ngrams appear
-    for row in df_with_ngrams.iterrows():
-        row_ngram_list = row[1]['ngrams_all']
-        row_df = pd.DataFrame()
+    # add a col which says which ngrams caused trouble
+    results_df['ngrams found'] = ""
+    for idx, row in results_df.iterrows():
+        temp_ngrams_in_training_utterance = [ngram for ngram in ngrams_in_utterance if ngram in row['utterance'].lower()]
+        results_df.loc[idx, 'ngrams found'] = str(temp_ngrams_in_training_utterance).strip("[]")
 
-        ngrams_not_in_training = []
+    return results_df.sort_values('Intent')
 
-        # get training samples containing ngrams, and append to a big df
-        for ngram in row_ngram_list:
-            tempdf = get_utterances_containing(ngram, topic, case_sensitive=False, just_utterances=False, to_csv=False, training=True, hide_output=True).drop(columns='utterance_lower')
-            tempdf = tempdf[tempdf['Intent'].isin(intent_list_lower)]
+def process_stopwords_arg(stopwords_arg):
+        """
+        'default' -> nltk + config
+        'none' -> no stopwords used at all
+        'nltk' -> just nltk
+        """
 
-            if len(tempdf) == 0:
-                ngrams_not_in_training.append(ngram)
+        # TODO: this shouldn't exist - it's just a (weird) mapping of variables. also exists in intent_intersections
 
-            row_df = row_df.append(tempdf)
+        if stopwords_arg == 'none':
+            return '_none'
+        elif stopwords_arg == 'nltk':
+            return None
+        elif stopwords_arg == 'config':
+            return stopwords
 
-        row_df = row_df.drop_duplicates()
-
-        cols_transfer = ["Question", "Expected Intent", "Intent1", "Confidence1", "Confusion"]
-
-        for col in cols_transfer:
-            try:
-                row_df[col] = str(row[1][col])
-            except:
-                logger.warn("Column {} not in input file so won't appear in output.".format(col))
-
-        # add any ngrams not in any of the training to a separate column
-        row_df['ngrams not in training'] = str(ngrams_not_in_training)
-
-        # make list of ngrams that are in both original and training utterances
-        problem_ngrams_all = []
-        for nrow in row_df.iterrows():
-            problem_ngrams = [ngram for ngram in row_ngram_list if (ngram in nrow[1]['Question'].lower() and ngram in nrow[1]['utterance'].lower())]
-            problem_ngrams_all.append(problem_ngrams)
-
-        row_df['problem_ngrams'] = problem_ngrams_all
-
-        return_df = return_df.append(row_df, sort=False)
-
-    return_df = return_df[["Question", "Expected Intent", "Intent1", 'utterance', 'Intent', 'problem_ngrams', 'ngrams not in training']].rename(columns={'utterance': 'training utterance', 'Intent': 'training intent', 'Question': 'confused utterance'})
-    return_df = return_df.sort_values(['confused utterance', 'training intent'])
-
-    timestr = time.strftime("%Y%m%d-%H%M")
-    filename = 'diagnose_confusion_' + topic + '_' + expected_intent + '_' + intent1 + '_' + timestr + '.csv'
-    file_path = os.path.join(output_folder, filename)
-    return_df.to_csv(file_path, index=False)
-    logger.info("Exported results to CSV at {}".format(file_path))
 
 if __name__ == "__main__":
-    main()
+    click_main()
+    
