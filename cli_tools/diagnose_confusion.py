@@ -12,7 +12,7 @@ import os
 import for_csv
 from for_csv.utils import process_list_argument
 from for_csv.nlp import extract_ngrams
-from get_utterances_containing import get_utterances_containing
+from cli_tools.get_utterances_containing import get_utterances_containing
 from config import *
 from logging import getLogger
 logger = getLogger("diagnose_confusion")
@@ -26,7 +26,8 @@ logger = getLogger("diagnose_confusion")
 def click_main(utterance, topic, n_list, swords):
     logger.info("Finding matching utterances..")
     logger.debug(utterance)
-    results_df = diagnose_from_utterance(utterance, topic, n_list, swords)
+    n_list = process_list_argument(n_list, int)
+    results_df = diagnose_confusion(utterance, topic, n_list, swords)
 
     logger.info("{} utterances found in {} intents".format(len(results_df), len(results_df['Intent'].unique())))
 
@@ -39,7 +40,7 @@ def click_main(utterance, topic, n_list, swords):
     else:
         logger.warn("No results found so nothing exported.")
 
-def diagnose_from_utterance(utterance, topic, n_list, stopwords_in):
+def diagnose_confusion(utterance, topic, n_list, stopwords_in):
     """
     Takes an utterance, splits it into ngrams, and searches for these ngrams in training. Returns training samples containing these ngrams.
     Intended as a rough, but more explainable version of looking at the nearest training utterances in feature space.
@@ -53,7 +54,6 @@ def diagnose_from_utterance(utterance, topic, n_list, stopwords_in):
     ##
 
     # process args
-    n_list = process_list_argument(n_list, int)
     stopwords_list = process_stopwords_arg(stopwords_in)
 
     # make list of all ngrams in utterance

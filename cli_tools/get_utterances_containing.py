@@ -32,14 +32,14 @@ def get_utterances_containing(string_arg, topic, case_sensitive, just_utterances
         string_arg = string_arg.lower()
     
     if training:
-        from get_out_of_scope_utterances import get_training_data
+        from cli_tools.get_out_of_scope_utterances import get_training_data
         df = get_training_data(topic)
 
         pdf = for_csv.process_dataframe(df, utterance_col='utterance')
         workspace_col = 'topic'
         intent_col = 'Intent'
     else:
-        from get_out_of_scope_utterances import get_external_data
+        from cli_tools.get_out_of_scope_utterances import get_external_data
         df = get_external_data(topic)
 
         pdf = for_csv.process_dataframe(df, utterance_col=utterance_col, conf1_col=conf1_col)
