@@ -180,7 +180,7 @@ class blindset(object):
             results: a Pandas dataframe with `original text`, `predicted intent` and also the results from WA
         """
 
-        results = pd.DataFrame(columns=['original_text','expected intent','intent1','confidence1',
+        results = pd.DataFrame(columns=['original_text','expected intent','r@1','intent1','confidence1',
                                         'intent2','confidence2','intent3','confidence3'])
         logger.info("Running blind test...")
         for i in tqdm(range(len(test_set_df))):
@@ -197,10 +197,11 @@ class blindset(object):
             confidence1 = data['intents'][0]['confidence']
             confidence2 = data['intents'][1]['confidence']
             confidence3 = data['intents'][2]['confidence']
-
+            r_1 = 1*(test_set_df["expected intent"][i] == intent1)
             results = results.append({
                 'original_text': test_set_df["utterance"][i],\
                 'expected intent': test_set_df["expected intent"][i],\
+                'r@1':  r_1, \
                 'intent1': intent1, \
                 'confidence1':confidence1, \
                 'intent2':intent2, \
