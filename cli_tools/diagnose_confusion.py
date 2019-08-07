@@ -60,8 +60,8 @@ def diagnose_confusion(utterance, topic, n_list, stopwords_in):
     ngrams_in_utterance = []
 
     for n in n_list:
-        ngrams_in_utterance.extend( extract_ngrams(utterance, n, stopwords_list=stopwords_in, chars_remove=chars_remove) )
-
+        ngrams_in_utterance.extend( extract_ngrams(utterance, n, stopwords_list, chars_remove=chars_remove) )
+    
     # look for each of these ngrams in training
     results_df = pd.DataFrame()
     for ngram in ngrams_in_utterance:
