@@ -10,4 +10,4 @@ nltk
 ansicolors
 tqdm
 itables
-matplotlib==3.1.10
+matplotlib==3.1.1
