@@ -2,7 +2,7 @@ jupyter
 pandas
 numpy
 datasketch
-watson_developer_cloud==2.0.1
+ibm_watson>=3.3
 scikit-learn
 click
 fuzzywuzzy

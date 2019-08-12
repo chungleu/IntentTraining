@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
-from watson_developer_cloud import AssistantV1
+from ibm_watson import AssistantV1
 from IPython.display import display
 from sklearn.metrics import *
 from sklearn.model_selection import *

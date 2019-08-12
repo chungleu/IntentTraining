@@ -11,7 +11,7 @@ import pandas as pd
 import json
 import click
 from tqdm import tqdm
-from watson_developer_cloud import AssistantV1
+from ibm_watson import AssistantV1
 
 # internal
 from config import data_dir

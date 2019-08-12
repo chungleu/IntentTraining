@@ -6,7 +6,7 @@ import matplotlib
 matplotlib.use('TKAgg')
 import matplotlib.pyplot as plt
 from tqdm import tqdm
-from watson_developer_cloud import AssistantV1
+from ibm_watson import AssistantV1
 from IPython.display import display
 from sklearn.metrics import *
 import itertools
