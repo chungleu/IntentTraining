@@ -293,9 +293,9 @@ if __name__ == "__main__":
     """ TESTING """
     """     # params
     auth_type = 'apikey'
-    apikey = '5XuD4BoYqV0Lx5PUltqzVnDue1MzCTgGcld8uCtPsNR_'
+    apikey = ''
     url = 'https://gateway.watsonplatform.net/assistant/api'
-    workspace_id = 'e6b17f68-9a81-4ac6-ae18-231717a47d3a'
+    workspace_id = ''
     test_set_path = '../data/puppy_blindset.csv'
     threshold = 0.4
     results_path = './blindset_results.csv'
