@@ -53,7 +53,7 @@ def run_blindset(topic, results_type, conf_matrix):
     # authenticate
     if 'apikey' in instance_creds:
         logger.debug("Authenticating (apikey)")
-        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh, version = conversation_version)
+        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh, version=conversation_version)
     elif 'password' in instance_creds:
         logger.debug("Authenticating (username/password)")
         bs = blindset(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh, 
@@ -142,7 +142,7 @@ class blindset(object):
         Takes apikey or username & password kwargs depending on auth_type.
         """
 
-        if self.auth_type == 'apikey':
+        if self.auth_type == 'apikey':            
             assistant = AssistantV1(
                 iam_apikey=self.apikey,
                 version=self.conversation_version, 

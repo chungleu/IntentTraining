@@ -2,7 +2,7 @@ jupyter
 pandas
 numpy
 datasketch
-ibm_watson>=3.3
+ibm_watson==3.4.2
 scikit-learn
 click
 fuzzywuzzy
