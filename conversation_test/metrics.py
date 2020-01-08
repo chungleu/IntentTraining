@@ -56,14 +56,14 @@ class Metrics(object):
         performance_stats['F1'] = 2*(performance_stats['precision'] * performance_stats['recall'])/(performance_stats['precision'] + performance_stats['recall'] )  
 
         performance_stats_df = pd.DataFrame.from_dict(performance_stats, orient='index').T 
-        self.workspace_index = 'workspace average'
+        self.workspace_index = 'workspace average (weighted)' 
         performance_stats_df.index = [self.workspace_index]
 
         results_with_confusion = df
 
         return performance_stats_df, results_with_confusion
 
-    def calculate_metrics_per_intent(self, results, detailed_results=False):
+    def calculate_metrics_per_intent(self, results, detailed_results=False, average_over_intents=True):
         """
         Returns set size, precision, recall, accuracy and F1 for each intent.
         detailed_results: enables/disables TP/FP/TN/FN in output
@@ -121,6 +121,11 @@ class Metrics(object):
 
         if not detailed_results:
             performance_stats_intent_df = performance_stats_intent_df[['threshold', 'set size','accuracy', 'precision', 'recall', 'F1']]
+
+        if average_over_intents:
+            cols_for_average = cols + ['threshold']
+            performance_stats_intent_df.loc['workspace average (intents)', cols_for_average] = performance_stats_intent_df.loc[:, cols_for_average].mean(axis=0)
+            performance_stats_intent_df = move_index_to_top(performance_stats_intent_df, 'workspace average (intents)')
 
         return performance_stats_intent_df
 
