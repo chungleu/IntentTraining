@@ -36,6 +36,13 @@ Cool. We have a small test suite that does blindset tests and K-Fold tests. Firs
 ## Further Usage
 As well as the notebooks and test suite there are also some CLI tools, with which you can do everything in the notebooks and a bit more. More details on these [in the Wiki](https://github.ibm.com/Kalyan-Dutia/intent_training_tools/wiki/Command-Line-tools).
 
+## Contributing
+The issues tab in this repo is being kept up-to-date, including ones that are good first issues. 
+
+If building a new feature, first create a feature branch using `git checkout -b feature/<my-feature-name>`. When you're done building, submit a pull request and assign it to `Kalyan-Dutia` and I'll merge.
+
+Please also message me for ACE feedback etc!
+
 ## Author/Contact
 Kalyan Dutia (kalyan.dutia@ibm.com)
 
