@@ -25,7 +25,8 @@ from conversation_test.metrics import Metrics
 @click.argument('topic', nargs=1)
 @click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics', 'all']), default='all', help='Whether to give raw results per utterance, metrics, or both.')
 @click.option('--conf_matrix', '-c', is_flag=True ,help='Whether to plot a confusion matrix.')
-def run_blindset(topic, results_type, conf_matrix):
+@click.option('--blindset_name', '-n', default=None, help='Specify which csv file in the data folder to use as a test set. Just have to give the relative path from the data folder (the filename if the file is in the data folder).')
+def run_blindset(topic, results_type, conf_matrix, blindset_name):
     """
     Runs blindset test using credentials in ../Credentials.py
     """
@@ -45,7 +46,7 @@ def run_blindset(topic, results_type, conf_matrix):
     export_folder = config.output_folder
     timestr = time.strftime("%Y%m%d-%H%M")
     
-    blindset_name = topic + "_blindset.csv"
+    blindset_name = blindset_name or topic + "_blindset.csv"
     output_loc_results = os.path.join(export_folder, "{}_results_raw_{}.csv".format(topic, timestr))
     output_loc_metrics = os.path.join(export_folder, "{}_results_metrics_{}.csv".format(topic, timestr))
     output_loc_confmat = os.path.join(export_folder, "{}_confmat_{}.png".format(topic, timestr))
