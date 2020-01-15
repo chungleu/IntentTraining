@@ -14,7 +14,7 @@ logger = getLogger("blindset")
 
 @click.command()
 @click.argument('input_name', nargs=1)
-@click.option('--output_name', '-o', default=None, help="Specify what to call output file, which will be returned in the output folder specified in config. If not specified, a default is used.")
+@click.option('--output_name', '-o', default=None, help="Specify what to call output file, which will be returned in the 'generated_test_sets' folder in the data folder specified in config. If not specified, a default is used.")
 @click.option('--skill_name', '-s', default=None, help="Specify the skill name. The output file will be named <skill_name>_generator_output_{time}.csv if this is specified, otherwise test_generator_output_{time}.csv.")
 @click.option('--sample_limit', '-l', type=int, default=None, help="If used, this will limit the number of records in the expanded test set. Sampling will be done at random.")
 def main(input_name, output_name, skill_name, sample_limit):
@@ -32,11 +32,12 @@ def main(input_name, output_name, skill_name, sample_limit):
     
     skill_name = skill_name or 'test'
 
+    gen_test_set_folder = os.path.join(config.data_dir, 'generated_test_sets')
     if output_name != None:
-        output_path = os.path.join(config.output_folder, output_name)
+        output_path = os.path.join(gen_test_set_folder, output_name)
     else:
         timestr = time.strftime("%Y%m%d-%H%M")
-        output_path = os.path.join(config.output_folder, f"{skill_name}_generator_output_{timestr}.csv")
+        output_path = os.path.join(gen_test_set_folder, f"{skill_name}_generator_output_{timestr}.csv")
 
     # for every row in the file
     logger.info("Splitting {} original utterances into permutations..".format(df.shape[0]))
