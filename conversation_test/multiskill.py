@@ -25,7 +25,7 @@ logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
 
 import conversation_test.blindset as blindset
 from conversation_test.metrics import Metrics
-from for_csv.utils import generate_timestamp
+from for_csv.utils import generate_timestamp, process_list_argument
 import for_csv.WA_utils as wa_utils
 import config
 import Credentials
@@ -37,11 +37,17 @@ conversation_version = Credentials.conversation_version
 workspace_thresh = Credentials.calculate_workspace_thresh(topic)
 """
 
+@click.command()
+@click.argument('topic_list')
+@click.option('--conf_matrix', '-c', help="Whether to plot confusion matrices for all skills (including master).")
+@click.option('--save_master_data', '-s', help="Whether to save the training set and blindset of the created master skill to the data folder.")
+def main(topic_list, conf_matrix, save_master_data):
+    skill_list = process_list_argument(topic_list, val_type=str)
+    master_skill_id = None # so exception works
 
-def main(conf_matrix, save_master_blind):
     try:
         # TO REPLACE WITH CLICK ARGS
-        skill_list = ['insurance', 'banking', 'mortgage']
+        #skill_list = ['insurance', 'banking', 'mortgage']
         id_dict = {skill: Credentials.workspace_id[active_adoption][skill] for skill in skill_list}
         timestr = generate_timestamp() # for use in all filenames
 
@@ -60,17 +66,11 @@ def main(conf_matrix, save_master_blind):
         logger.info("Importing all blindsets and combining into master")
         blind_dict = dict()
         for skill in skill_list:
-            bs_path = get_bs_path(skill)
+            bs_path = os.path.join(config.data_dir, f"{skill}_blindset.csv")
             blind_dict[skill] = bs.import_blindset(bs_path)
 
         master_blind_allcols = pd.concat([v.assign(topic=k) for k,v in blind_dict.items()], axis=0, ignore_index=True, sort=False)
         master_blind = master_blind_allcols[['utterance', 'topic']].rename(columns={'topic': 'expected intent'})
-
-        if save_master_blind:
-            # export master blindset with both intent and topic labels to CSV
-            master_blind_path = os.path.join(config.data_dir,f"master_blindset_{timestr}.csv")
-            master_blind_allcols.to_csv(master_blind_path, header=None, index=None)
-            logger.info("Master blindset saved to {}".format(master_blind_path))
 
         # get all training data from WA
         logger.info("Getting training data from WA")
@@ -133,19 +133,31 @@ def main(conf_matrix, save_master_blind):
 
         # export results
         for skill in skill_list:
-            results_dict[skill].to_csv(os.path.join(config.output_folder,f'{skill}_multi_results_{timestr}.csv'))
-            metrics_dict[skill].to_csv(os.path.join(config.output_folder,f'{skill}_multi_metrics_{timestr}.csv'))
+            results_dict[skill].to_csv(os.path.join(config.output_folder,f'{skill}_multi_results_{timestr}.csv'), index=None)
+            metrics_dict[skill].to_csv(os.path.join(config.output_folder,f'{skill}_multi_metrics_{timestr}.csv'), index=None)
 
-        results_master.to_csv(os.path.join(config.output_folder,f"master_multi_results_{timestr}.csv"))
+        results_master.to_csv(os.path.join(config.output_folder,f"master_multi_results_{timestr}.csv"), index=None)
+        metrics_master.to_csv(os.path.join(config.output_folder,f"master_multi_metrics_{timestr}.csv"), index=None)
+        logger.info("Results and metrics saved to output folder")
+
+        if save_master_data:
+            # export master blindset with both intent and topic labels to CSV
+            master_blind_allcols.to_csv(os.path.join(config.data_dir,f"master_blindset_{timestr}.csv"), index=None)
+            
+            # export master training to CSV
+            master_train.to_csv(os.path.join(config.data_dir,f"master_training_{timestr}.csv"), header=None, index=None)
+
+            logger.info("Master blindset and training have also been saved to {}".format(master_blind_path))
 
         # delete master skill
         logger.info("Deleting temporary master skill")
         wa_utils.delete_workspace(bs.assistant, master_skill_id)
 
     except Exception as e:
-        # make sure master deleted anyway
-        logger.info("Deleting temporary master skill before exit")
-        wa_utils.delete_workspace(bs.assistant, master_skill_id)
+        if master_skill_id is not None:
+            # make sure master deleted anyway
+            logger.info("Deleting temporary master skill before exit")
+            wa_utils.delete_workspace(bs.assistant, master_skill_id)
 
         raise e
 
@@ -158,6 +170,7 @@ def check_skills_exist(skill_list):
     cr_notexist = []
 
     topics_in_creds = Credentials.workspace_id[active_adoption].keys()
+    get_bs_path = lambda s: os.path.join(config.data_dir, f"{s}_blindset.csv")
 
     for skill in skill_list:
         # append skill to bs_notexist if blindset doesn't exist
@@ -178,8 +191,5 @@ def check_skills_exist(skill_list):
     else:
         logger.debug("All skills exist in credentials and blindsets")
 
-def get_bs_path(skill):
-    return os.path.join(config.data_dir, f"{skill}_blindset.csv")
-
 if __name__ == "__main__":
-    main(conf_matrix=False, save_master_blind=False)
+    main()
