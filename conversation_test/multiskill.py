@@ -19,8 +19,9 @@ sys.path.append('..')
 
 # internal
 import for_csv.logger
-from logging import getLogger
-logger = getLogger("multiskill")
+import logging
+logger = logging.getLogger("multiskill")
+logging.getLogger("matplotlib.font_manager").setLevel(logging.WARNING)
 
 import conversation_test.blindset as blindset
 from for_csv.utils import generate_timestamp
@@ -36,10 +37,11 @@ workspace_thresh = Credentials.calculate_workspace_thresh(topic)
 """
 
 
-def main():
+def main(conf_matrix):
     # TO REPLACE WITH CLICK ARGS
     skill_list = ['insurance', 'banking', 'mortgage']
     id_dict = {skill: Credentials.workspace_id[active_adoption][skill] for skill in skill_list}
+    timestr = generate_timestamp() # for use in all filenames
 
     # authenticate
     if 'apikey' in instance_creds:
@@ -63,7 +65,6 @@ def main():
     master_blind = master_blind_allcols[['utterance', 'topic']].rename(columns={'topic': 'expected intent'})
 
     # export master blindset with both intent and topic labels to CSV
-    timestr = generate_timestamp()
     master_blind_path = os.path.join(config.data_dir,f"master_blindset_{timestr}.csv")
     master_blind_allcols.to_csv(master_blind_path, header=None, index=None)
     logger.info("Master blindset saved to {}".format(master_blind_path))
@@ -89,6 +90,23 @@ def main():
     for skill in skill_list:
         results_dict[skill] = bs.run_blind_test(blind_dict[skill], id_dict[skill], threshold=Credentials.calculate_workspace_thresh(skill))
         results_dict[skill].to_csv(f'../temp/{skill}_results.csv')
+
+    # plot confusion matrices
+    if conf_matrix:
+        from conversation_test.confusionmatrix import ConfusionMatrix
+        
+        conf_output_path = lambda s: os.path.join(config.output_folder, f"{s}_confmat_{timestr}.png")
+
+        # master
+        cfn = ConfusionMatrix(workspace_thresh=Credentials.calculate_workspace_thresh('master'))
+        cfn.create(results_master, fig_path=conf_output_path('master'))
+        
+        # topics
+        for skill in skill_list:
+            cfn = ConfusionMatrix(workspace_thresh=Credentials.calculate_workspace_thresh(skill))
+            cfn.create(results_dict[skill], fig_path=conf_output_path(skill))
+        
+        logger.info("Confusion matrix saved to results folder")
 
     # delete master skill
     logger.info("Deleting temporary master skill")
@@ -127,4 +145,5 @@ def get_bs_path(skill):
     return os.path.join(config.data_dir, f"{skill}_blindset.csv")
 
 if __name__ == "__main__":
-    main()
+    conf_mat=True
+    main(conf_matrix=conf_mat)
