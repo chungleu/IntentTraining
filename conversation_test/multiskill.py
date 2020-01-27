@@ -124,10 +124,10 @@ def main(topic_list, conf_matrix, save_master_data):
         # run blindset on master
         logger.info("Running blindset on master..")
         results_master = bs.run_blind_test(master_blind, master_skill_id, threshold=master_thresh)
+        results_master['routing'] = results_master['intent1']
+        results_master.loc[results_master['confidence1'] < master_thresh, 'routing'] = 'anything_else'
 
         # create blindsets for topics based on master results
-        res_anythingelse = results_master[results_master["confidence1"] < master_thresh]
-
         newblind_dict = dict()
         for skill in skill_list:
             # blindset for each skill is made up of utterances that have landed in that skill for master
