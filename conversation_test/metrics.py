@@ -81,7 +81,7 @@ class Metrics(object):
         intents = df['intent1'].unique().tolist()
         
         # calculate accuracy, precision, recall, F1 for each intent
-        confmat = df.groupby(['expected intent', 'confusion']).count()['original_text'].unstack().fillna(0)
+        confmat = df.groupby(['intent1', 'confusion']).count()['original_text'].unstack().fillna(0)
         for item in ['TP', 'FP', 'FN', 'TN']:
             if item not in confmat.columns:
                 confmat[item] = 0
