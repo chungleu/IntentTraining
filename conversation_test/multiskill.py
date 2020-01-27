@@ -46,8 +46,6 @@ def main(topic_list, conf_matrix, save_master_data):
     master_skill_id = None # so exception works
 
     try:
-        # TO REPLACE WITH CLICK ARGS
-        #skill_list = ['insurance', 'banking', 'mortgage']
         id_dict = {skill: Credentials.workspace_id[active_adoption][skill] for skill in skill_list}
         timestr = generate_timestamp() # for use in all filenames
 
