@@ -152,9 +152,6 @@ def main(topic_list, conf_matrix, save_master_data):
                 threshold=Credentials.calculate_workspace_thresh(skill),
             )
 
-            # DEBUG
-            results_dict[skill].to_csv(f"../temp/{skill}_results.csv", index=None)
-
         #  plot confusion matrices
         if conf_matrix:
             from conversation_test.confusionmatrix import ConfusionMatrix
@@ -185,9 +182,7 @@ def main(topic_list, conf_matrix, save_master_data):
         metrics_dict = dict()
         for skill in skill_list:
             met = Metrics(workspace_thresh=Credentials.calculate_workspace_thresh(skill))
-            metrics_dict[skill], _ = met.get_all_metrics(
-                results_dict[skill], detailed_results=True
-            )
+            metrics_dict[skill], _ = met.get_all_metrics(results_dict[skill], detailed_results=True)
 
         # export results
         for skill in skill_list:
