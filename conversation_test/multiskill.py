@@ -124,8 +124,10 @@ def main(topic_list, conf_matrix, save_master_data):
         # run blindset on master
         logger.info("Running blindset on master..")
         results_master = bs.run_blind_test(master_blind, master_skill_id, threshold=master_thresh)
-        results_master['routing'] = results_master['intent1']
-        results_master.loc[results_master['confidence1'] < master_thresh, 'routing'] = 'anything_else'
+        results_master["routing"] = results_master["intent1"]
+        results_master.loc[
+            results_master["confidence1"] < master_thresh, "routing"
+        ] = "anything_else"
 
         # create blindsets for topics based on master results
         newblind_dict = dict()
@@ -180,9 +182,31 @@ def main(topic_list, conf_matrix, save_master_data):
 
         # topics
         metrics_dict = dict()
+        res_with_conf_dict = dict()
         for skill in skill_list:
             met = Metrics(workspace_thresh=Credentials.calculate_workspace_thresh(skill))
-            metrics_dict[skill], _ = met.get_all_metrics(results_dict[skill], detailed_results=True)
+            metrics_dict[skill], res_with_conf_dict[skill] = met.get_all_metrics(
+                results_dict[skill], detailed_results=True
+            )
+
+        # topics - create overall view as if it's a single skill
+        topics_res_with_conf = pd.concat(
+            [v for k, v in res_with_conf_dict.items()], ignore_index=True, sort=False
+        )
+        
+        results_master.loc[results_master["routing"] == "anything_else", 'confusion'] = 'FN'
+
+        topics_res_with_conf = topics_res_with_conf.append(
+            results_master,
+            ignore_index=True,
+            sort=False,
+        )
+        metrics_overall = met.calculate_metrics_per_intent(
+            topics_res_with_conf, detailed_results=True
+        )
+        
+        metrics_overall.loc[metrics_overall.index.isin(skill_list), 'threshold'] = master_thresh
+        metrics_overall = metrics_overall.rename(index={s: s+' - anything else' for s in skill_list})
 
         # export results
         for skill in skill_list:
@@ -199,6 +223,9 @@ def main(topic_list, conf_matrix, save_master_data):
         )
         metrics_master.to_csv(
             os.path.join(config.output_folder, f"master_multi_metrics_{timestr}.csv")
+        )
+        metrics_overall.to_csv(
+            os.path.join(config.output_folder, f"overall_multi_metrics_{timestr}.csv")
         )
         logger.info("Results and metrics saved to output folder")
 
