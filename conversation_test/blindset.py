@@ -114,7 +114,8 @@ class blindset(object):
         if 'threshold' in kwargs:
             self.threshold = kwargs['threshold']
         else:
-            raise ValueError("Threshold needs to be provided")
+            self.threshold = False
+            logger.debug('No threshold provided. Provide one when running the blindset test.')
         
         # make sure all variables are here
         if ('apikey' not in kwargs) and (any(('username', 'password')) not in kwargs):
@@ -168,9 +169,11 @@ class blindset(object):
 
         test_set_df = pd.read_csv(blindset_path, names=['utterance', 'expected intent'])
 
+        # remove leading and trailing whitespace from intent labels
+        test_set_df['expected intent'] = test_set_df['expected intent'].str.strip()
         return test_set_df
 
-    def run_blind_test(self, test_set_df, workspace_id):
+    def run_blind_test(self, test_set_df, workspace_id, **kwargs):
         """
         Runs blind set test and returns results df.
         
@@ -181,6 +184,15 @@ class blindset(object):
             results: a Pandas dataframe with `original text`, `predicted intent` and also the results from WA
         """
 
+        # if no threshold has been passed into the object, take one from the function args
+        if self.threshold == False and 'threshold' not in kwargs:
+            raise ValueError("Must provide a threshold either to the blindset object or this function.")
+        elif 'threshold' in kwargs:
+            # threshold in function args overwrites one provided to the object, even if one has been set
+            threshold = kwargs['threshold']
+        else:
+            threshold = self.threshold
+            
         results = pd.DataFrame(columns=['original_text','expected intent','r@1','intent1','confidence1',
                                         'intent2','confidence2','intent3','confidence3'])
         logger.info("Running blind test...")

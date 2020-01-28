@@ -21,11 +21,12 @@ def move_index_to_top(df, index_to_move):
     return df.reindex([index_to_move, *index_vals])
 
 class Metrics(object):
-    def __init__(self, workspace_thresh):
+    def __init__(self, workspace_thresh, rat1_col="R@1"):
         """
         workspace_thresh (num < 1): confidence threshold for workspace
         """
         self.workspace_thresh = workspace_thresh
+        self.rat1_col = rat1_col
 
     def calculate_workspace_metrics(self, results):
         """
@@ -34,11 +35,11 @@ class Metrics(object):
         """
         df = results.copy()
         df['confusion'] = 'none'
-        df['R@1'] = df['expected intent'] == df['intent1']
-        df.loc[((df['R@1'] == True) & (df['confidence1'] > self.workspace_thresh)), 'confusion'] = 'TP'
-        df.loc[((df['R@1'] == False) & (df['confidence1'] > self.workspace_thresh)), 'confusion'] = 'FP'
-        df.loc[((df['R@1'] == True) & (df['confidence1'] < self.workspace_thresh)), 'confusion'] = 'FN'
-        df.loc[((df['R@1'] == False) & (df['confidence1'] < self.workspace_thresh)), 'confusion'] = 'TN'
+        df[self.rat1_col] = df['expected intent'] == df['intent1']
+        df.loc[((df[self.rat1_col] == True) & (df['confidence1'] > self.workspace_thresh)), 'confusion'] = 'TP'
+        df.loc[((df[self.rat1_col] == False) & (df['confidence1'] > self.workspace_thresh)), 'confusion'] = 'FP'
+        df.loc[((df[self.rat1_col] == True) & (df['confidence1'] < self.workspace_thresh)), 'confusion'] = 'FN'
+        df.loc[((df[self.rat1_col] == False) & (df['confidence1'] < self.workspace_thresh)), 'confusion'] = 'TN'
 
         confmat = df.groupby('confusion').count()['original_text']
 
@@ -80,7 +81,7 @@ class Metrics(object):
         intents = df['intent1'].unique().tolist()
         
         # calculate accuracy, precision, recall, F1 for each intent
-        confmat = df.groupby(['expected intent', 'confusion']).count()['original_text'].unstack().fillna(0)
+        confmat = df.groupby(['intent1', 'confusion']).count()['original_text'].unstack().fillna(0)
         for item in ['TP', 'FP', 'FN', 'TN']:
             if item not in confmat.columns:
                 confmat[item] = 0

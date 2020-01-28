@@ -19,6 +19,12 @@ def process_list_argument(list_arg, val_type=int):
 
     return list_out
 
+def generate_timestamp():
+    """
+    Generates timestamp string to use on the end of filenames.
+    """
+    return time.strftime("%Y%m%d-%H%M")
+
 class utils(object):
     def __init__(self, topic, margin_params={'margin_max': 0.5, 'min_conf1':0.2}, lowconf_max=0.1, dissimilarity_params = {'dissimilarity_min': 0, 'sortby_margin': True}, minhash_params={'threshold':0.5, 'num_perm':512, 'shingle_length':5}):
         self.margin_params = margin_params
