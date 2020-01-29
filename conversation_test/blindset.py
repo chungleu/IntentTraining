@@ -170,7 +170,7 @@ class blindset(object):
         test_set_df = pd.read_csv(blindset_path, names=['utterance', 'expected intent'])
 
         # remove leading and trailing whitespace from intent labels
-        test_set_df['expected intent'] = test_set_df['expected intent'].str.strip()
+        test_set_df['expected intent'] = test_set_df['expected intent'].astype(str).str.strip()
         return test_set_df
 
     def run_blind_test(self, test_set_df, workspace_id, **kwargs):
