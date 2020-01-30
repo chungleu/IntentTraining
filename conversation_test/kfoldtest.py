@@ -210,7 +210,7 @@ class kfoldtest(object):
             name_intent = data["intents"][i]["intent"]
 
             # Call WA to get the list of Examples of each intent 
-            response = self.assistant.list_examples(workspace_id = workspace_id, intent = name_intent)
+            response = self.assistant.list_examples(workspace_id = workspace_id, intent = name_intent, page_limit=10000)
             dumps = json.dumps(response.get_result(), indent=2)
             data_examples = json.loads(dumps)
 
