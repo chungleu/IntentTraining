@@ -118,7 +118,7 @@ class blindset(object):
             logger.debug('No threshold provided. Provide one when running the blindset test.')
         
         # make sure all variables are here
-        if ('apikey' not in kwargs) and (any(('username', 'password')) not in kwargs):
+        if ('apikey' not in kwargs) and (('username' not in kwargs) or ('password' not in kwargs)):
             raise ValueError("One of username & password, or apikey must be present. ")
 
         if 'apikey' in kwargs:
