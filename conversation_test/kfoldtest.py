@@ -378,13 +378,23 @@ class kfoldtest(object):
             
             data = json.loads(dumps)
 
-            intent1= data['intents'][0]['intent']
-            intent2= data['intents'][1]['intent']
-            intent3= data['intents'][2]['intent']
-            confidence1 = data['intents'][0]['confidence']
-            confidence2 = data['intents'][1]['confidence']
-            confidence3 = data['intents'][2]['confidence']
+            no_intents = len(data['intents'])
 
+            intent1= data['intents'][0]['intent']
+            confidence1 = data['intents'][0]['confidence']
+
+            if no_intents >= 2:
+                intent2= data['intents'][1]['intent'] 
+                confidence2 = data['intents'][1]['confidence'] 
+            else:
+                intent2 = confidence2 = ""
+
+            if no_intents >= 3:
+                intent3= data['intents'][2]['intent']
+                confidence3 = data['intents'][2]['confidence']
+            else:
+                intent3 = confidence3 = ""
+                
             results = results.append({
                     'original_text': df_test["utterance"][i],
                     'expected intent': df_test["intent"][i],
