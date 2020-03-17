@@ -19,7 +19,7 @@ sys.path.append('..')
 import for_csv.logger
 from logging import getLogger
 logger = getLogger("kfoldtest")
-
+import config
 import click
 
 # internal imports
@@ -261,13 +261,14 @@ class kfoldtest(object):
         """
         response = self.assistant.list_workspaces().get_result()
         k_fold_number = self.n_folds
+        max_workspaces = config.max_workspaces
 
-        if(len(response['workspaces'])+k_fold_number <=20):
+        if(len(response['workspaces'])+k_fold_number <= max_workspaces):
             logger.info("You have space to perform the k-fold test")
         else: 
-            remove = len(response['workspaces'])+k_fold_number-20
-            raise ValueError("The K-fold test will make you exceed the 20 workspaces limit. Make "
-            "sure to remove {} workspaces before creating the k-fold workspaces".format(remove))
+            remove = len(response['workspaces'])+k_fold_number-max_workspaces
+            raise ValueError("The K-fold test will make you exceed the {}} workspaces limit. Make "
+            "sure to remove {} workspaces before creating the k-fold workspaces".format(remove, max_workspaces))
         
 
     def create_intents(self, train_index):

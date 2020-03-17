@@ -4,6 +4,8 @@ data_dir = os.path.join(current_dir, "data") # ./data
 training_dir = os.path.join(data_dir, "workspace_training") # ./data/workspace_training directory containing training CSVs with the naming convention "topic_questions.csv", and test set CSVs with the naming convention "topic_blindset.csv"
 output_folder =  os.path.join(current_dir, "results") # ./results
 
+max_workspaces = 20 # for kfold check
+
 ### STOPWORDS & CHARS TO IGNORE FOR NGRAM EXTRACTION
 # these stopwords will be used on top of the default nltk stopwords (english only) if you select the option 'config'
 stopwords = ['hi', 'just', 'hello', 'could', 'might', 'must', 'need', 'would', 'thank', 'thanks' ,"'", ".", ",", "!", ";", "?"] 
