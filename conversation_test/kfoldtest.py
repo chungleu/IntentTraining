@@ -29,7 +29,8 @@ from conversation_test.metrics import Metrics
 @click.argument('topic', nargs=1)
 @click.option('--no_folds', '-n', type=int, default=5, help="No. folds to run for kfold test")
 @click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics_intent', 'all']), default='all', help='Whether to give raw results per utterance, metrics (per intent), or all available.')
-def run_kfold(topic, no_folds, results_type):
+@click.option('--conf_matrix', '-c', is_flag=True ,help='Whether to plot a confusion matrix.')
+def run_kfold(topic, no_folds, results_type, conf_matrix):
     """
     Runs kfold test using credentials in ../Credentials.py
     """
@@ -92,6 +93,11 @@ def run_kfold(topic, no_folds, results_type):
             metric_df.to_csv(output_loc_metrics)
 
         # TODO: confusion matrix
+        if conf_matrix:
+            from confusionmatrix import ConfusionMatrix
+            cfn = ConfusionMatrix(workspace_thresh=workspace_thresh)
+            cfn.create(results, fig_path=output_loc_confmat)
+            logger.info("Confusion matrix saved to {}".format(output_loc_confmat))
 
     finally:
         # regardless of what happens above, delete the temporary workspaces before exiting
@@ -366,7 +372,7 @@ class kfoldtest(object):
         :param ws-id: the index of the fold that would be used to call the correct workspace id that needs to be test 
         :return results: a pandas dataframe with original text, predicted intent and also the results from WA
         """
-        results = pd.DataFrame([],columns = ['original_text','expected intent','intent1',
+        results = pd.DataFrame([],columns = ['original_text','expected intent','r@1','c@1','intent1',
                             'confidence1','intent2','confidence2','intent3',
                             'confidence3'])
 
@@ -395,10 +401,15 @@ class kfoldtest(object):
                 confidence3 = data['intents'][2]['confidence']
             else:
                 intent3 = confidence3 = ""
-                
+
+            r_1 = df_test["intent"][i] == intent1
+            c_1 = r_1 and (confidence1 >= self.threshold)
+
             results = results.append({
                     'original_text': df_test["utterance"][i],
                     'expected intent': df_test["intent"][i],
+                    'r@1': 1*r_1,
+                    'c@1': 1*c_1,
                     'intent1': intent1, 
                     'confidence1':confidence1, 
                     'intent2':intent2, 
