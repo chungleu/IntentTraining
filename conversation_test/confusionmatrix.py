@@ -42,7 +42,7 @@ class ConfusionMatrix:
         le = preprocessing.LabelEncoder()
         le.fit(self.all_intents)
 
-        df_ord = pd.DataFrame(columns=df.columns.values)
+        df_ord = pd.DataFrame(columns=df.columns.values, index=df.index.values)
         df_ord['expected intent'] = le.transform(df['expected intent'])
         df_ord['intent1'] = le.transform(df['intent1'])
         df_ord['confidence1'] = df['confidence1'].copy()
