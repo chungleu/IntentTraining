@@ -372,7 +372,7 @@ class kfoldtest(object):
         :param ws-id: the index of the fold that would be used to call the correct workspace id that needs to be test 
         :return results: a pandas dataframe with original text, predicted intent and also the results from WA
         """
-        results = pd.DataFrame([],columns = ['original_text','expected intent','intent1',
+        results = pd.DataFrame([],columns = ['original_text','expected intent','r@1','intent1',
                             'confidence1','intent2','confidence2','intent3',
                             'confidence3'])
 
@@ -401,10 +401,13 @@ class kfoldtest(object):
                 confidence3 = data['intents'][2]['confidence']
             else:
                 intent3 = confidence3 = ""
-                
+
+            r_1 = 1*(df_test["intent"][i] == intent1)
+
             results = results.append({
                     'original_text': df_test["utterance"][i],
                     'expected intent': df_test["intent"][i],
+                    'r@1': r_1,
                     'intent1': intent1, 
                     'confidence1':confidence1, 
                     'intent2':intent2, 
