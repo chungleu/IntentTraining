@@ -193,7 +193,7 @@ class blindset(object):
         else:
             threshold = self.threshold
             
-        results = pd.DataFrame(columns=['original_text','expected intent','r@1','c@1','intent1','confidence1',
+        results = pd.DataFrame(columns=['original_text','expected intent','r@1','TP','intent1','confidence1',
                                         'intent2','confidence2','intent3','confidence3'])
         logger.info("Running blind test...")
         for i in tqdm(range(len(test_set_df))):
@@ -222,12 +222,12 @@ class blindset(object):
                 intent3 = confidence3 = ""
 
             r_1 = (test_set_df["expected intent"][i] == intent1)
-            c_1 = r_1 and (confidence1 >= self.threshold)
+            tp = r_1 and (confidence1 >= self.threshold)
             results = results.append({
                 'original_text': test_set_df["utterance"][i],\
                 'expected intent': test_set_df["expected intent"][i],\
                 'r@1':  1*r_1, \
-                'c@1': 1*c_1, \
+                'TP': 1*tp, \
                 'intent1': intent1, \
                 'confidence1':confidence1, \
                 'intent2':intent2, \
