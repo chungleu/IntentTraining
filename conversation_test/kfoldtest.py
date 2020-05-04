@@ -206,7 +206,7 @@ class kfoldtest(object):
         Reads the workspace via API returns a dataframe with intents and examples.
         """
         # Call WA to ge the list of the intents 
-        response = self.assistant.list_intents(workspace_id = workspace_id, )
+        response = self.assistant.list_intents(workspace_id = workspace_id, page_limit=10000)
         obj = json.dumps(response.get_result(), indent=2)
         data = json.loads(obj)
         
