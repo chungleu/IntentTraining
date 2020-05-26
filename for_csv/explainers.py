@@ -88,7 +88,7 @@ class lime_explainer(object):
 
         # explain class
         explainer = LimeTextExplainer(class_names=classes)
-        exp = explainer.explain_instance(input_text, self.classify_text, num_features=7, top_labels=3, num_samples=100)
+        exp = explainer.explain_instance(input_text, self.classify_text, num_features=7, top_labels=3, num_samples=1000)
 
         # print explanation
         if print_results:
