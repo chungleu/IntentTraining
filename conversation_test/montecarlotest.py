@@ -34,7 +34,7 @@ from conversation_test.kfoldtest import kfoldtest
 @click.option('--conf_matrix', '-c', is_flag=True ,help='Whether to plot a confusion matrix.')
 def run_mc(topic, no_folds, sample_size, results_type, conf_matrix):
     """
-    Runs kfold test using credentials in ../Credentials.py
+    Runs monte-carlo test using credentials in ../Credentials.py
     """
 
     # get credentials, import + export folders
