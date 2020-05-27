@@ -68,7 +68,7 @@ def run_kfold(topic, no_folds, results_type, conf_matrix):
     kf.check_sufficient_workspaces()
 
     # create folds in WA if above is true
-    folds = kf.create_folds()
+    folds = kf.create_folds(method='kfold')
     kf.create_kfold_WA(folds)
 
     available_flag = False
@@ -238,27 +238,68 @@ class kfoldtest(object):
 
         self.training_df = df
 
-    def create_folds(self):
+    def create_folds(self, method, sample_size=0.2):
         """
-        create the folds for the k-fold test. It is using the Stratifies K-fold division. 
+        Create folds either through stratified kfold or monte-carlo.
+        Monte-Carlo is always stratified. 
+        :param method: one of [kfold, monte-carlo].
+        :param sample_size: the proportion of utterances to hold out for monte-carlo testing.
+        :return folds: a list of folds containing the train and test indices for each fold
+        """
+
+        if method == "kfold":
+            return self.create_folds_kfold()
+        elif method == "monte-carlo":
+            return self.create_folds_mc(sample_size)
+        else:
+            raise ValueError("Parameter method must either be 'kfold' or 'monte-carlo'")
+
+    def create_folds_kfold(self):
+        """
+        Create the folds for the k-fold test. It is using the Stratified K-fold division. 
         
         :param self.training_df: the dataframe containing the whole GT of the workspace 
         :return folds: a list of folds containing for each fold the train and test set indexes. 
         """
 
-        df = self.training_df
-        k_fold_number = self.n_folds
-
         folds = []
         i = 0
-        skf = StratifiedKFold(n_splits = k_fold_number, shuffle = True, random_state = 2)
-        for train_index, test_index in skf.split(df['utterance'], df['intent']):
+        skf = StratifiedKFold(n_splits = self.n_folds, shuffle = True, random_state = 2)
+        for train_index, test_index in skf.split(self.training_df['utterance'], self.training_df['intent']):
             fold = {"train": train_index,
                     "test": test_index}
             folds.append(fold)
-            logger.debug("fold num {}: train set: {}, test set: {}".format(i+1,len(folds[i]["train"]), len(folds[i]["test"])))
+            logger.debug("fold num {}: train set: {}, test set: {}".format(i+1,len(fold["train"]), len(fold["test"])))
             i += 1
         
+        return folds
+
+    def create_folds_mc(self, sample_size):
+        """
+        Create folds for a Monte-Carlo test. Each fold is a new and independent random sample, stratified 
+        with respect to intent size.
+        :param: proportion of training set held out as test set.
+        """
+
+        folds = []
+        samples_per_intent = np.ceil(self.training_df.groupby('intent').count() * sample_size)
+        intents = self.training_df['intent'].unique().tolist()
+
+        for i in range(0,self.n_folds):
+            train_inds = []
+            test_inds = []
+            
+            for intent in intents:
+                questions_intent = self.training_df[self.training_df['intent'] == intent]
+                no_tosample = int(samples_per_intent['utterance'][intent])
+                test_inds += questions_intent.sample(n=no_tosample).index.tolist()
+                train_inds += list(set(questions_intent.index.tolist()) - set(test_inds))
+
+            fold = {"train": train_inds,
+                    "test": test_inds}
+            folds.append(fold)
+            logger.debug("fold num {}: train set: {}, test set: {}".format(i+1,len(fold["train"]), len(fold["test"])))
+
         return folds
 
     def check_sufficient_workspaces(self):
@@ -571,12 +612,12 @@ class kfoldtest(object):
 
         self.workspaces = []
 
-    def full_run_kfold_from_df(self, train_df):
+    def full_run_kfold_from_df(self, train_df, method='kfold'):
         """
         Given a training df, will run kfold tests and output all metrics.
         """
         self.check_sufficient_workspaces()
-        folds = self.create_folds()
+        folds = self.create_folds(method)
         self.create_kfold_WA(folds)
 
         available_flag = False
