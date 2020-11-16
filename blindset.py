@@ -1,30 +1,30 @@
-# ## Libraries
-import json 
+# Libraries
+from conversation_test.metrics import Metrics
+from logging import getLogger
+import for_csv.logger
+import sys
+import os
+import click
+import itertools
+from sklearn.metrics import *
+from IPython.display import display
+from ibm_watson import AssistantV1
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+import json
 import pandas as pd
 import numpy as np
 import matplotlib
 matplotlib.use('TKAgg')
-import matplotlib.pyplot as plt
-from tqdm import tqdm
-from ibm_watson import AssistantV1
-from IPython.display import display
-from sklearn.metrics import *
-import itertools
-import click
-import os
-import sys
 sys.path.append('..')
 
-import for_csv.logger
-from logging import getLogger
 logger = getLogger("blindset")
 
-from conversation_test.metrics import Metrics
 
 @click.command()
 @click.argument('topic', nargs=1)
 @click.option('--results_type', '-r', type=click.Choice(['raw', 'metrics', 'all']), default='all', help='Whether to give raw results per utterance, metrics, or both.')
-@click.option('--conf_matrix', '-c', is_flag=True ,help='Whether to plot a confusion matrix.')
+@click.option('--conf_matrix', '-c', is_flag=True, help='Whether to plot a confusion matrix.')
 @click.option('--blindset_name', '-n', default=None, help='Specify which csv file in the data folder to use as a test set. Just have to give the relative path from the data folder (the filename if the file is in the data folder).')
 def run_blindset(topic, results_type, conf_matrix, blindset_name):
     """
@@ -35,6 +35,9 @@ def run_blindset(topic, results_type, conf_matrix, blindset_name):
     import Credentials
     active_adoption = Credentials.active_adoption
     instance_creds = Credentials.ctx[active_adoption]
+    print(instance_creds)
+    print('print works')
+
     workspace_id = Credentials.workspace_id[active_adoption][topic]
     workspace_thresh = Credentials.calculate_workspace_thresh(topic)
     conversation_version = Credentials.conversation_version
@@ -45,21 +48,25 @@ def run_blindset(topic, results_type, conf_matrix, blindset_name):
     data_folder = config.data_dir
     export_folder = config.output_folder
     timestr = time.strftime("%Y%m%d-%H%M")
-    
+
     blindset_name = blindset_name or topic + "_blindset.csv"
-    output_loc_results = os.path.join(export_folder, "{}_results_raw_{}.csv".format(topic, timestr))
-    output_loc_metrics = os.path.join(export_folder, "{}_results_metrics_{}.csv".format(topic, timestr))
-    output_loc_confmat = os.path.join(export_folder, "{}_confmat_{}.png".format(topic, timestr))
+    output_loc_results = os.path.join(
+        export_folder, "{}_results_raw_{}.csv".format(topic, timestr))
+    output_loc_metrics = os.path.join(
+        export_folder, "{}_results_metrics_{}.csv".format(topic, timestr))
+    output_loc_confmat = os.path.join(
+        export_folder, "{}_confmat_{}.png".format(topic, timestr))
 
     # authenticate
     if 'apikey' in instance_creds:
         logger.debug("Authenticating (apikey)")
-        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'], threshold=workspace_thresh, version=conversation_version)
+        bs = blindset(apikey=instance_creds['apikey'], url=instance_creds['url'],
+                      threshold=workspace_thresh, version=conversation_version)
     elif 'password' in instance_creds:
         logger.debug("Authenticating (username/password)")
-        bs = blindset(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh, 
-            version=conversation_version)
-    
+        bs = blindset(username=instance_creds['username'], password=instance_creds['password'], url=instance_creds['url'], threshold=workspace_thresh,
+                      version=conversation_version)
+
     # run test
     blindset_df = bs.import_blindset(os.path.join(data_folder, blindset_name))
     # TODO: check blindset df
@@ -67,7 +74,8 @@ def run_blindset(topic, results_type, conf_matrix, blindset_name):
 
     # exports + metrics
     if (results_type == 'raw') or (results_type == 'all'):
-        cols_export = [col for col in results.columns.values if col != 'intent_correct']
+        cols_export = [
+            col for col in results.columns.values if col != 'intent_correct']
         results[cols_export].to_csv(output_loc_results, encoding='utf-8')
         logger.info("Raw results exported to {}".format(output_loc_results))
 
@@ -76,21 +84,23 @@ def run_blindset(topic, results_type, conf_matrix, blindset_name):
         metric_df, _ = met.get_all_metrics(results, detailed_results=True)
 
         metric_df.to_csv(output_loc_metrics, encoding='utf-8')
-        logger.info("Metrics per intent exported to {}".format(output_loc_metrics))
+        logger.info("Metrics per intent exported to {}".format(
+            output_loc_metrics))
 
     # confusion matrix
     if conf_matrix:
         from confusionmatrix import ConfusionMatrix
         cfn = ConfusionMatrix(workspace_thresh=workspace_thresh)
         cfn.create(results, fig_path=output_loc_confmat)
-        #bs.plot_confusion_matrix(results, output_loc_confmat)    
+        #bs.plot_confusion_matrix(results, output_loc_confmat)
         logger.info("Confusion matrix saved to {}".format(output_loc_confmat))
 
     # print high-level metrics
-    overall_metrics = bs.calculate_overall_metrics(results, av_method="weighted")
+    overall_metrics = bs.calculate_overall_metrics(
+        results, av_method="weighted")
     logger.info("Overall metrics for the workspace (weighted):")
     logger.info(overall_metrics)
-    
+
     # TODO: check consistency of test set before running.
 
 
@@ -104,8 +114,9 @@ class blindset(object):
     - threshold
     - version
     """
+
     def __init__(self, **kwargs):
-        
+
         if 'url' in kwargs:
             self.url = kwargs['url']
         else:
@@ -115,11 +126,13 @@ class blindset(object):
             self.threshold = kwargs['threshold']
         else:
             self.threshold = False
-            logger.debug('No threshold provided. Provide one when running the blindset test.')
-        
+            logger.debug(
+                'No threshold provided. Provide one when running the blindset test.')
+
         # make sure all variables are here
         if ('apikey' not in kwargs) and (('username' not in kwargs) or ('password' not in kwargs)):
-            raise ValueError("One of username & password, or apikey must be present. ")
+            raise ValueError(
+                "One of username & password, or apikey must be present. ")
 
         if 'apikey' in kwargs:
             self.apikey = kwargs['apikey']
@@ -144,18 +157,18 @@ class blindset(object):
         Takes apikey or username & password kwargs depending on auth_type.
         """
 
-        if self.auth_type == 'apikey':            
+        if self.auth_type == 'apikey':
             assistant = AssistantV1(
                 iam_apikey=self.apikey,
-                version=self.conversation_version, 
-                url= self.url)
+                version=self.conversation_version,
+                url=self.url)
 
         elif self.auth_type == 'password':
             assistant = AssistantV1(
                 username=self.username,
                 password=self.password,
                 version=self.conversation_version,
-                url= self.url)  
+                url=self.url)
 
         self.assistant = assistant
 
@@ -167,16 +180,18 @@ class blindset(object):
         if not blindset_path.endswith('.csv'):
             raise ValueError("Blindset file must be a CSV.")
 
-        test_set_df = pd.read_csv(blindset_path, names=['utterance', 'expected intent'])
+        test_set_df = pd.read_csv(blindset_path, names=[
+                                  'utterance', 'expected intent'])
 
         # remove leading and trailing whitespace from intent labels
-        test_set_df['expected intent'] = test_set_df['expected intent'].astype(str).str.strip()
+        test_set_df['expected intent'] = test_set_df['expected intent'].astype(
+            str).str.strip()
         return test_set_df
 
     def run_blind_test(self, test_set_df, workspace_id, **kwargs):
         """
         Runs blind set test and returns results df.
-        
+
         Parameter: 
             test_set_df: the regression_test in csv format
 
@@ -186,37 +201,39 @@ class blindset(object):
 
         # if no threshold has been passed into the object, take one from the function args
         if self.threshold == False and 'threshold' not in kwargs:
-            raise ValueError("Must provide a threshold either to the blindset object or this function.")
+            raise ValueError(
+                "Must provide a threshold either to the blindset object or this function.")
         elif 'threshold' in kwargs:
             # threshold in function args overwrites one provided to the object, even if one has been set
             threshold = kwargs['threshold']
         else:
             threshold = self.threshold
-            
-        results = pd.DataFrame(columns=['original_text','expected intent','r@1','TP','intent1','confidence1',
-                                        'intent2','confidence2','intent3','confidence3'])
+
+        results = pd.DataFrame(columns=['original_text', 'expected intent', 'r@1', 'TP', 'intent1', 'confidence1',
+                                        'intent2', 'confidence2', 'intent3', 'confidence3'])
         logger.info("Running blind test...")
         for i in tqdm(range(len(test_set_df))):
 
             text = test_set_df["utterance"][i]
-            response = self.assistant.message(workspace_id=workspace_id, input={'text': text}, alternate_intents= True)
+            response = self.assistant.message(workspace_id=workspace_id, input={
+                                              'text': text}, alternate_intents=True)
             dumps = json.dumps(response.get_result(), indent=2)
 
             data = json.loads(dumps)
 
             no_intents = len(data['intents'])
 
-            intent1= data['intents'][0]['intent']
+            intent1 = data['intents'][0]['intent']
             confidence1 = data['intents'][0]['confidence']
 
             if no_intents >= 2:
-                intent2= data['intents'][1]['intent'] 
-                confidence2 = data['intents'][1]['confidence'] 
+                intent2 = data['intents'][1]['intent']
+                confidence2 = data['intents'][1]['confidence']
             else:
                 intent2 = confidence2 = ""
 
             if no_intents >= 3:
-                intent3= data['intents'][2]['intent']
+                intent3 = data['intents'][2]['intent']
                 confidence3 = data['intents'][2]['confidence']
             else:
                 intent3 = confidence3 = ""
@@ -224,20 +241,21 @@ class blindset(object):
             r_1 = (test_set_df["expected intent"][i] == intent1)
             tp = r_1 and (confidence1 >= self.threshold)
             results = results.append({
-                'original_text': test_set_df["utterance"][i],\
-                'expected intent': test_set_df["expected intent"][i],\
-                'r@1':  1*r_1, \
-                'TP': 1*tp, \
-                'intent1': intent1, \
-                'confidence1':confidence1, \
-                'intent2':intent2, \
-                'confidence2': confidence2, \
+                'original_text': test_set_df["utterance"][i],
+                'expected intent': test_set_df["expected intent"][i],
+                'r@1':  1*r_1,
+                'TP': 1*tp,
+                'intent1': intent1,
+                'confidence1': confidence1,
+                'intent2': intent2,
+                'confidence2': confidence2,
                 'intent3': intent3,
-                'confidence3': confidence3, \
+                'confidence3': confidence3,
             }, ignore_index=True)
 
         results["intent_correct"] = results["intent1"]
-        results["intent_correct"] = np.where((results["confidence1"]<self.threshold), "BELOW_THRESHOLD", results["intent1"])
+        results["intent_correct"] = np.where(
+            (results["confidence1"] < self.threshold), "BELOW_THRESHOLD", results["intent1"])
 
         return results
 
@@ -246,19 +264,20 @@ class blindset(object):
         this function prepares the dataframe to be used for plot confusion matrix
         """
 
-        matrix = confusion_matrix(dataframe["intent_correct"], dataframe["expected intent"])
-        
+        matrix = confusion_matrix(
+            dataframe["intent_correct"], dataframe["expected intent"])
+
         lab1 = dataframe["intent_correct"].unique()
         lab2 = dataframe["expected intent"].unique()
-        lab = np.union1d(lab1,lab2)
-        
+        lab = np.union1d(lab1, lab2)
+
         return matrix, lab
 
-    def plot_confusion_matrix(self, results, 
-                            save_path=None,
-                            normalize=False,
-                            title='Confusion matrix',
-                            cmap=plt.cm.RdPu):
+    def plot_confusion_matrix(self, results,
+                              save_path=None,
+                              normalize=False,
+                              title='Confusion matrix',
+                              cmap=plt.cm.RdPu):
         """
         This function prints and plots the confusion matrix.
         It also saves it to save_path if specified.
@@ -269,8 +288,8 @@ class blindset(object):
 
         if normalize:
             cm = cm.astype('float') / cm.sum(axis=1)[:, np.newaxis]
-        
-        plt.figure(figsize=(12,12))
+
+        plt.figure(figsize=(12, 12))
         plt.imshow(cm, interpolation='nearest', cmap=cmap)
         plt.title(title)
         plt.colorbar()
@@ -282,25 +301,26 @@ class blindset(object):
         thresh = cm.max() / 2.
         for i, j in itertools.product(range(cm.shape[0]), range(cm.shape[1])):
             plt.text(j, i, format(cm[i, j], fmt),
-                    horizontalalignment="center",
-                    color="white" if cm[i, j] > thresh else "black")
+                     horizontalalignment="center",
+                     color="white" if cm[i, j] > thresh else "black")
 
         plt.ylabel('Actual Intent')
         plt.xlabel('Predicted Intent')
         plt.tight_layout()
-        
+
         if save_path:
-            plt.savefig(save_path) 
+            plt.savefig(save_path)
 
     def calculate_overall_metrics(self, results, av_method='weighted'):
         """
         Gets results for whole corpus tested from a results file. 
         """
-        accuracy = accuracy_score(results["intent_correct"], results["expected intent"])
+        accuracy = accuracy_score(
+            results["intent_correct"], results["expected intent"])
 
-        precision,recall,fscore,support=precision_recall_fscore_support(results["intent_correct"],
-                                                                        results["expected intent"],
-                                                                        average=av_method)
+        precision, recall, fscore, support = precision_recall_fscore_support(results["intent_correct"],
+                                                                             results["expected intent"],
+                                                                             average=av_method)
 
         return {'accuracy': accuracy, 'precision': precision, 'recall': recall, 'F1Score': fscore}
 
@@ -308,10 +328,11 @@ class blindset(object):
         """
         Returns a dataframe showing precision, recall and F1 for each intent and overall for the workspace.
         """
-        
-        report = classification_report(results["intent_correct"], results["expected intent"], output_dict=True)
+
+        report = classification_report(
+            results["intent_correct"], results["expected intent"], output_dict=True)
         report_df = pd.DataFrame.from_dict(report)
-        
+
         return report_df.T
 
 
