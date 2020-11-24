@@ -10,7 +10,8 @@ import pandas as pd
 import fuzzywuzzy.process as fuzz_process
 from fuzzywuzzy import fuzz
 
-def extract_ngrams(sentence, n, stopwords_list=None, chars_remove=None):
+
+def extract_ngrams(sentence, n, stopwords_list='_none', chars_remove=None):
     """
     Returns a list of ngrams in a sentence, after removing a list of 
     stopwords.
@@ -37,7 +38,8 @@ def extract_ngrams(sentence, n, stopwords_list=None, chars_remove=None):
     sentence = sentence.lower()
     chars_remove = '[' + chars_remove + ']'
     sentence = re.sub(chars_remove, '', sentence)
-    tokens = [token for token in sentence.split(' ') if token != '' and token not in stopword_set]
+    tokens = [token for token in sentence.split(
+        ' ') if token != '' and token not in stopword_set]
 
     all_ngrams = nltk.ngrams(tokens, n)
     ngram_list = []
@@ -47,6 +49,7 @@ def extract_ngrams(sentence, n, stopwords_list=None, chars_remove=None):
             ngram_list.append(' '.join(ngram))
 
     return ngram_list
+
 
 class ngrams_df(object):
     """
@@ -73,11 +76,12 @@ class ngrams_df(object):
         tempdf = self.df.copy()
         col_names = ['ngram_' + str(n) for n in n_list]
 
-        for idx, n in enumerate(n_list):            
-            tempdf[col_names[idx]] = tempdf[self.utterance_col].apply(extract_ngrams, n=n, stopwords_list=self.stopwords, chars_remove=self.chars_remove)
-        
+        for idx, n in enumerate(n_list):
+            tempdf[col_names[idx]] = tempdf[self.utterance_col].apply(
+                extract_ngrams, n=n, stopwords_list=self.stopwords, chars_remove=self.chars_remove)
+
         tempdf['ngrams_all'] = tempdf[col_names].sum(axis=1)
-        
+
         self.df = tempdf
         return self.df
 
@@ -96,7 +100,8 @@ class ngrams_df(object):
 
         for n in n_set:
             col_name = 'ngram_' + str(n)
-            column_list = [ngram for ngram_list in self.df[col_name] for ngram in ngram_list]
+            column_list = [ngram for ngram_list in self.df[col_name]
+                           for ngram in ngram_list]
             ngram_list.extend(column_list)
 
         return ngram_list
@@ -110,7 +115,7 @@ class ngrams_df(object):
         self.create_ngram_cols(n_list)
         ngram_list = self.list_from_ngram_cols()
 
-        return ngram_list    
+        return ngram_list
 
     def get_ngram_frequencies(self, n_list, top_a=False, norm=False, norm_thresh=False):
         """
@@ -140,11 +145,13 @@ class ngrams_df(object):
 
             if norm:
                 temp_df = temp_df / temp_df.max()
-                temp_df = temp_df.rename_axis('ngram').reset_index().rename(columns={0: 'count_norm'})
+                temp_df = temp_df.rename_axis(
+                    'ngram').reset_index().rename(columns={0: 'count_norm'})
                 if norm_thresh:
                     temp_df = temp_df[temp_df['count_norm'] >= norm_thresh]
             else:
-                temp_df = temp_df.rename_axis('ngram').reset_index().rename(columns={0: 'count'})
+                temp_df = temp_df.rename_axis(
+                    'ngram').reset_index().rename(columns={0: 'count'})
 
             temp_df['n'] = n
 
@@ -152,7 +159,8 @@ class ngrams_df(object):
 
         return freq_df
 
-def fuzzy_match_lists(input_str, match_list, score_thresh=90, return_name = False):
+
+def fuzzy_match_lists(input_str, match_list, score_thresh=90, return_name=False):
     """
     Checks whether input_str is similar to any item in match_list.
     score_t = scoring function
@@ -162,7 +170,8 @@ def fuzzy_match_lists(input_str, match_list, score_thresh=90, return_name = Fals
     master_df['response_match'] = master_df['response'].apply(self.fuzzy_match_lists, match_list=failed_responses_list, score_t=fuzz.ratio)
     """
     input_str = str(input_str)
-    new_name, score, idx = fuzz_process.extractOne(input_str, match_list, scorer=fuzz.ratio)
+    new_name, score, idx = fuzz_process.extractOne(
+        input_str, match_list, scorer=fuzz.ratio)
     if score > score_thresh:
         if return_name:
             return new_name
@@ -171,10 +180,11 @@ def fuzzy_match_lists(input_str, match_list, score_thresh=90, return_name = Fals
     else:
         return False
 
+
 if __name__ == '__main__':
     test_string = "just went to india - i had a great time"
 
-    import sys 
+    import sys
     sys.path.append('..')
     from config import chars_remove
 
