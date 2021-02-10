@@ -215,8 +215,16 @@ class blindset(object):
         for i in tqdm(range(len(test_set_df))):
 
             text = test_set_df["utterance"][i]
-            response = self.assistant.message(workspace_id=workspace_id, input={
-                                              'text': text}, alternate_intents=True)
+            response = self.assistant.message(
+                workspace_id=workspace_id,
+                input={'text': text},
+                context={
+                    'metadata': {
+                        'user_id': 'intent_test_user1'
+                    }
+                },
+                alternate_intents=True
+            )
             dumps = json.dumps(response.get_result(), indent=2)
 
             data = json.loads(dumps)
